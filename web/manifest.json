@@ -1,6 +1,6 @@
 {
-    "name": "robot_app",
-    "short_name": "robot_app",
+    "name": "robot_cleaner",
+    "short_name": "robot_cleaner",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
