@@ -1,114 +1,190 @@
 import 'package:flutter/material.dart';
 
+import '../models/robot_status.dart';
+
 class RobotStatusCard extends StatelessWidget {
-  final String robotName;
-  final bool online;
-  final int battery;
-  final String area;
-  final String status;
-  final int progress;
+  const RobotStatusCard({super.key, required this.status});
 
-  const RobotStatusCard({
-    super.key,
-    required this.robotName,
-    required this.online,
-    required this.battery,
-    required this.area,
-    required this.status,
-    required this.progress,
-  });
+  final RobotStatus status;
 
-  Color _statusColor() {
-    switch (status) {
-      case "清扫中":
-        return Colors.green;
-      case "已暂停":
-        return Colors.orange;
-      case "充电中":
-        return Colors.blue;
-      case "紧急停止":
-        return Colors.red;
-      default:
-        return Colors.grey;
+  Color _statusColor(BuildContext context) {
+    switch (status.state) {
+      case RobotState.cleaning:
+        return Colors.green.shade700;
+      case RobotState.paused:
+        return Colors.orange.shade800;
+      case RobotState.charging:
+        return Colors.blue.shade700;
+      case RobotState.emergency:
+        return Colors.red.shade800;
+      case RobotState.idle:
+        return status.progress == 100
+            ? Colors.teal.shade700
+            : Theme.of(context).colorScheme.outline;
     }
-  }
-
-  Widget _buildInfoRow(IconData icon, String title, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Row(
-        children: [
-          Icon(icon, size: 22),
-          const SizedBox(width: 10),
-          Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
-          const Spacer(),
-          Text(value),
-        ],
-      ),
-    );
   }
 
   @override
   Widget build(BuildContext context) {
+    final color = _statusColor(context);
     return Card(
-      elevation: 3,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      key: const Key('robot-status-card'),
+      elevation: 1,
+      margin: EdgeInsets.zero,
+      clipBehavior: Clip.antiAlias,
       child: Padding(
-        padding: const EdgeInsets.all(18),
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              "机器人状态",
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-
-            const SizedBox(height: 15),
-
-            _buildInfoRow(Icons.smart_toy, "设备", robotName),
-
-            _buildInfoRow(Icons.wifi, "连接状态", online ? "在线" : "离线"),
-
-            _buildInfoRow(Icons.battery_full, "电量", "$battery%"),
-
-            _buildInfoRow(Icons.location_on, "当前区域", area),
-
             Row(
               children: [
-                const Icon(Icons.settings),
-                const SizedBox(width: 10),
-                const Text(
-                  "当前状态",
-                  style: TextStyle(fontWeight: FontWeight.w600),
+                CircleAvatar(
+                  backgroundColor: Theme.of(
+                    context,
+                  ).colorScheme.primaryContainer,
+                  child: const Icon(Icons.smart_toy_outlined),
                 ),
-                const Spacer(),
-                Chip(
-                  backgroundColor: _statusColor(),
-                  label: Text(
-                    status,
-                    style: const TextStyle(color: Colors.white),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '机器人名称',
+                        style: Theme.of(context).textTheme.labelMedium,
+                      ),
+                      Text(
+                        status.robotName,
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: color,
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 7,
+                    ),
+                    child: Text(
+                      status.stateText,
+                      key: const Key('task-state-text'),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
                   ),
                 ),
               ],
             ),
-
-            const SizedBox(height: 18),
-
-            const Text("任务进度", style: TextStyle(fontWeight: FontWeight.bold)),
-
-            const SizedBox(height: 10),
-
+            const SizedBox(height: 14),
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final itemWidth = constraints.maxWidth >= 520
+                    ? (constraints.maxWidth - 12) / 2
+                    : constraints.maxWidth;
+                return Wrap(
+                  spacing: 12,
+                  runSpacing: 8,
+                  children: [
+                    _InfoItem(
+                      width: itemWidth,
+                      icon: status.online ? Icons.wifi : Icons.wifi_off,
+                      label: '在线状态',
+                      value: status.online ? '在线' : '离线',
+                      valueColor: status.online
+                          ? Colors.green.shade700
+                          : Colors.red.shade700,
+                    ),
+                    _InfoItem(
+                      width: itemWidth,
+                      icon: Icons.battery_5_bar,
+                      label: '电量',
+                      value: '${status.battery}%',
+                    ),
+                    _InfoItem(
+                      width: itemWidth,
+                      icon: Icons.location_on_outlined,
+                      label: '当前区域',
+                      value: status.area,
+                    ),
+                    _InfoItem(
+                      width: itemWidth,
+                      icon: Icons.assignment_outlined,
+                      label: '当前任务状态',
+                      value: status.stateText,
+                    ),
+                  ],
+                );
+              },
+            ),
+            const SizedBox(height: 14),
+            Row(
+              children: [
+                const Text(
+                  '任务进度',
+                  style: TextStyle(fontWeight: FontWeight.w700),
+                ),
+                const Spacer(),
+                Text('${status.progress}%', key: const Key('progress-text')),
+              ],
+            ),
+            const SizedBox(height: 8),
             LinearProgressIndicator(
-              value: progress / 100,
+              key: const Key('task-progress'),
+              value: status.progress / 100,
               minHeight: 10,
               borderRadius: BorderRadius.circular(8),
+              color: color,
             ),
-
-            const SizedBox(height: 8),
-
-            Align(alignment: Alignment.centerRight, child: Text("$progress%")),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _InfoItem extends StatelessWidget {
+  const _InfoItem({
+    required this.width,
+    required this.icon,
+    required this.label,
+    required this.value,
+    this.valueColor,
+  });
+
+  final double width;
+  final IconData icon;
+  final String label;
+  final String value;
+  final Color? valueColor;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: width,
+      child: Row(
+        children: [
+          Icon(icon, size: 20, color: Theme.of(context).colorScheme.primary),
+          const SizedBox(width: 8),
+          Text('$label：', style: Theme.of(context).textTheme.bodyMedium),
+          Expanded(
+            child: Text(
+              value,
+              textAlign: TextAlign.right,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(fontWeight: FontWeight.w700, color: valueColor),
+            ),
+          ),
+        ],
       ),
     );
   }
