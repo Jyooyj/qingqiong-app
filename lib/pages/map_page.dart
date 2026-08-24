@@ -41,29 +41,29 @@ class MapPage extends StatelessWidget {
       ),
     ];
 
-    // planned path within A区 (zig-zag / back-and-forth)
+    // Demo task is only cleaning A区, so planned/cleaned/robot/warn are all inside A区.
     final planned = [
-      const MapPointView(x: 0.14, y: 0.16),
-      const MapPointView(x: 0.40, y: 0.16),
-      const MapPointView(x: 0.40, y: 0.23),
-      const MapPointView(x: 0.14, y: 0.23),
-      const MapPointView(x: 0.14, y: 0.30),
-      const MapPointView(x: 0.40, y: 0.30),
-      const MapPointView(x: 0.40, y: 0.37),
-      const MapPointView(x: 0.14, y: 0.37),
+      const MapPointView(x: 0.12, y: 0.16),
+      const MapPointView(x: 0.24, y: 0.16),
+      const MapPointView(x: 0.24, y: 0.22),
+      const MapPointView(x: 0.34, y: 0.22),
+      const MapPointView(x: 0.34, y: 0.30),
+      const MapPointView(x: 0.20, y: 0.30),
+      const MapPointView(x: 0.20, y: 0.36),
+      const MapPointView(x: 0.36, y: 0.36),
+      const MapPointView(x: 0.36, y: 0.39),
+      const MapPointView(x: 0.16, y: 0.39),
     ];
 
-    // cleaned path is strictly the first three planned points
-    final cleaned = [planned[0], planned[1], planned[2]];
+    final cleaned = planned.sublist(0, 5);
+    final robot = cleaned.last;
+    final charging = const MapPointView(x: 0.10, y: 0.13, label: 'Charger');
 
-    final robot = cleaned.last; // should equal planned[2]
-    final charging = const MapPointView(x: 0.09, y: 0.15, label: 'Charger');
-
-    // place WARN-007 at planned[3]
+    // WARN-007 sits on the next uncleaned section immediately after the robot.
+    final warningPoint = planned[cleaned.length];
     final obstacles = [
-      MapObstacleView(position: planned[3], code: 'WARN-007'),
-      // ordinary red obstacle in C区 but not overlapping key items
-      MapObstacleView(position: const MapPointView(x: 0.72, y: 0.65)),
+      MapObstacleView(position: warningPoint, code: 'WARN-007'),
+      MapObstacleView(position: const MapPointView(x: 0.41, y: 0.26)),
     ];
 
     return Scaffold(

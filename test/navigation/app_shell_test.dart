@@ -41,25 +41,29 @@ void main() {
     // Tap 任务
     await tester.tap(find.byIcon(Icons.assignment).first);
     await tester.pumpAndSettle();
-    expect(find.text('任务（占位）'), findsOneWidget);
+    expect(find.text('任务中心'), findsOneWidget);
+    expect(find.byKey(const Key('filter-all')), findsOneWidget);
     expect(tester.takeException(), isNull);
 
     // Tap 地图
     await tester.tap(find.byIcon(Icons.map).first);
     await tester.pumpAndSettle();
-    expect(find.text('地图（占位）'), findsOneWidget);
+    expect(find.text('地图 / 轨迹'), findsOneWidget);
+    expect(find.text('A区'), findsWidgets);
     expect(tester.takeException(), isNull);
 
     // Tap 告警
+    await tester.ensureVisible(find.byIcon(Icons.notifications).first);
+    await tester.pumpAndSettle();
     await tester.tap(find.byIcon(Icons.notifications).first);
     await tester.pumpAndSettle();
-    expect(find.text('告警（占位）'), findsOneWidget);
+    expect(find.text('告警中心'), findsOneWidget);
     expect(tester.takeException(), isNull);
 
     // Tap 我的
     await tester.tap(find.byIcon(Icons.person).first);
     await tester.pumpAndSettle();
-    expect(find.text('我的（占位）'), findsOneWidget);
+    expect(find.text('我的 / 设置'), findsOneWidget);
     expect(tester.takeException(), isNull);
 
     // Tap 回首页
