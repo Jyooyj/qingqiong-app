@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'controllers/robot_controller.dart';
-import 'pages/home_page.dart';
+import 'navigation/app_shell.dart';
 
 void main() {
   runApp(const QingQiongApp());
@@ -29,7 +29,7 @@ class QingQiongApp extends StatelessWidget {
           border: OutlineInputBorder(),
         ),
       ),
-      home: HomePage(controller: controller),
+      home: AppShell(controller: controller),
     );
   }
 }
