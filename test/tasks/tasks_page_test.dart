@@ -275,13 +275,15 @@ void main() {
       await tester.ensureVisible(find.byKey(const Key('task-card-c')));
       await tester.tap(find.byKey(const Key('task-card-c')));
       await tester.pumpAndSettle();
-      expect(find.text('Completed Task'), findsOneWidget);
+      expect(find.byType(TaskDetailView), findsOneWidget);
+      expect(find.text('Completed Task'), findsWidgets);
 
       // switch to pending filter -> selected should be cleared and placeholder shown
       await tester.ensureVisible(find.byKey(const Key('filter-pending')));
       await tester.tap(find.byKey(const Key('filter-pending')));
       await tester.pumpAndSettle();
 
+      expect(find.byType(TaskDetailView), findsNothing);
       expect(find.text('Completed Task'), findsNothing);
       expect(find.text('选择任务查看详情'), findsOneWidget);
 
@@ -289,7 +291,8 @@ void main() {
       await tester.ensureVisible(find.byKey(const Key('task-card-p')));
       await tester.tap(find.byKey(const Key('task-card-p')));
       await tester.pumpAndSettle();
-      expect(find.text('Pending Task'), findsOneWidget);
+      expect(find.byType(TaskDetailView), findsOneWidget);
+      expect(find.text('Pending Task'), findsWidgets);
     },
   );
 }

@@ -50,7 +50,8 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('dashboard-current-task')));
     await tester.pumpAndSettle();
-    expect(find.text('任务（占位）'), findsOneWidget);
+    expect(find.text('任务中心'), findsOneWidget);
+    expect(find.byKey(const Key('filter-all')), findsOneWidget);
 
     // Back to home
     await tester.tap(find.byIcon(Icons.home).first);
@@ -62,7 +63,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('dashboard-recent-alert')));
     await tester.pumpAndSettle();
-    expect(find.text('告警（占位）'), findsOneWidget);
+    expect(find.text('告警中心'), findsOneWidget);
 
     // Back to home then trigger a demo fault to produce a warning and verify severity and time display
     await tester.tap(find.byIcon(Icons.home).first);

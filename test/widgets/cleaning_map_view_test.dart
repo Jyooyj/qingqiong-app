@@ -225,20 +225,58 @@ void main() {
     tester,
   ) async {
     final planned = [
-      const MapPointView(x: 0.08, y: 0.12),
-      const MapPointView(x: 0.42, y: 0.12),
-      const MapPointView(x: 0.42, y: 0.18),
-      const MapPointView(x: 0.08, y: 0.18),
-      const MapPointView(x: 0.08, y: 0.24),
-      const MapPointView(x: 0.42, y: 0.24),
-      const MapPointView(x: 0.42, y: 0.30),
-      const MapPointView(x: 0.08, y: 0.30),
+      const MapPointView(x: 0.12, y: 0.16),
+      const MapPointView(x: 0.24, y: 0.16),
+      const MapPointView(x: 0.24, y: 0.22),
+      const MapPointView(x: 0.34, y: 0.22),
+      const MapPointView(x: 0.34, y: 0.30),
+      const MapPointView(x: 0.20, y: 0.30),
+      const MapPointView(x: 0.20, y: 0.36),
+      const MapPointView(x: 0.36, y: 0.36),
+      const MapPointView(x: 0.36, y: 0.39),
+      const MapPointView(x: 0.16, y: 0.39),
     ];
-    final cleaned = planned.sublist(0, planned.length ~/ 2);
+    final cleaned = planned.sublist(0, 5);
     final robot = cleaned.last;
     final obstacles = [
       MapObstacleView(position: planned[cleaned.length], code: 'WARN-007'),
+      MapObstacleView(position: const MapPointView(x: 0.41, y: 0.26)),
     ];
+
+    for (final point in planned) {
+      expect(point.x >= 0.12 && point.x <= 0.40, isTrue);
+      expect(point.y >= 0.16 && point.y <= 0.39, isTrue);
+    }
+    expect(
+      obstacles[1].position.x >= 0.05 && obstacles[1].position.x <= 0.45,
+      isTrue,
+    );
+    expect(
+      obstacles[1].position.y >= 0.10 && obstacles[1].position.y <= 0.45,
+      isTrue,
+    );
+    expect(
+      obstacles[1].position.x != planned[0].x ||
+          obstacles[1].position.y != planned[0].y,
+      isTrue,
+    );
+    expect(cleaned.length <= planned.length, isTrue);
+    for (var i = 0; i < cleaned.length; i++) {
+      expect(cleaned[i].x, planned[i].x);
+      expect(cleaned[i].y, planned[i].y);
+    }
+    expect(robot.x, cleaned.last.x);
+    expect(robot.y, cleaned.last.y);
+    expect(obstacles.first.position.x, planned[cleaned.length].x);
+    expect(obstacles.first.position.y, planned[cleaned.length].y);
+    expect(
+      obstacles.first.position.x >= 0.12 && obstacles.first.position.x <= 0.40,
+      isTrue,
+    );
+    expect(
+      obstacles.first.position.y >= 0.16 && obstacles.first.position.y <= 0.39,
+      isTrue,
+    );
 
     await tester.pumpWidget(
       MaterialApp(
@@ -256,18 +294,9 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    // cleanedPath is prefix of plannedPath
-    expect(cleaned.length <= planned.length, isTrue);
-    for (var i = 0; i < cleaned.length; i++) {
-      expect(cleaned[i].x, planned[i].x);
-      expect(cleaned[i].y, planned[i].y);
-    }
-
-    // robot marker corresponds to cleaned.last
     final robotMarker = find.byKey(const Key('robot-marker'));
     expect(robotMarker, findsOneWidget);
 
-    // highlight label exists and within map
     expect(find.byKey(const Key('highlight-label-WARN-007')), findsOneWidget);
     final hl = tester.getTopLeft(
       find.byKey(const Key('obstacle-highlight-WARN-007')),
@@ -277,7 +306,6 @@ void main() {
     expect(hl.dx >= 0 && hl.dx <= mapSize.width, isTrue);
     expect(hl.dy >= 0 && hl.dy <= mapSize.height, isTrue);
 
-    // legend items exist
     expect(find.byKey(const Key('legend-charger')), findsOneWidget);
     expect(find.byKey(const Key('legend-robot')), findsOneWidget);
     expect(find.byKey(const Key('legend-planned')), findsOneWidget);
@@ -285,10 +313,9 @@ void main() {
     expect(find.byKey(const Key('legend-obstacle')), findsOneWidget);
     expect(find.byKey(const Key('legend-warn')), findsOneWidget);
 
-    // legend should be outside the map canvas (not a descendant of the map CustomPaint)
     final mapFinder = find.byWidgetPredicate((w) {
       if (w is! CustomPaint) return false;
-      final p = (w as CustomPaint).painter;
+      final p = w.painter;
       return p != null &&
           p.runtimeType.toString().contains('CleaningMapPainter');
     }).first;

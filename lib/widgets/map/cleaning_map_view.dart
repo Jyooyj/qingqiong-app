@@ -86,8 +86,12 @@ class CleaningMapView extends StatelessWidget {
       final ys = z.points.map((p) => p.y).toList();
       final minX = xs.reduce(math.min);
       final minY = ys.reduce(math.min);
-      final left = (minX * size.width) + 8.0;
-      final top = (minY * size.height) + 6.0;
+      var left = (minX * size.width) + 8.0;
+      var top = (minY * size.height) + 6.0;
+      if (z.id == 'a') {
+        left += 18.0;
+        top += 18.0;
+      }
       widgets.add(
         Positioned(
           left: left,
@@ -137,20 +141,20 @@ class CleaningMapView extends StatelessWidget {
           ),
         );
 
-        // label near obstacle, clamped within map bounds
+        // label near obstacle but kept away from the route and robot; prefer upper-left.
         final labelLeft = math.max(
-          4.0,
-          math.min(off.dx + 18.0, size.width - 140.0),
+          8.0,
+          math.min(off.dx - 140.0, size.width - 130.0),
         );
         final labelTop = math.max(
-          4.0,
-          math.min(off.dy - 20.0, size.height - 36.0),
+          10.0,
+          math.min(off.dy - 30.0, size.height - 36.0),
         );
         final isNarrow = size.width < 420;
         widgets.add(
           Positioned(
-            left: isNarrow ? math.max(4.0, off.dx - 40.0) : labelLeft,
-            top: isNarrow ? (off.dy + 18.0) : labelTop,
+            left: isNarrow ? math.max(8.0, off.dx - 80.0) : labelLeft,
+            top: isNarrow ? (off.dy - 26.0) : labelTop,
             child: Container(
               key: Key('highlight-label-${o.code}'),
               constraints: const BoxConstraints(maxWidth: 120),
