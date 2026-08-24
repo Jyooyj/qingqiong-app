@@ -2,17 +2,25 @@ import 'package:flutter/material.dart';
 
 import '../controllers/robot_controller.dart';
 import '../services/voice_control_service.dart';
-import '../services/warning_service.dart';
 import '../widgets/control_panel.dart';
 import '../widgets/demo_fault_panel.dart';
 import '../widgets/robot_status_card.dart';
+import '../widgets/dashboard/current_task_card.dart';
+import '../widgets/dashboard/dashboard_stats_card.dart';
+import '../widgets/dashboard/recent_alert_card.dart';
 import '../widgets/voice_control_sheet.dart';
-import '../widgets/warning_card.dart';
 
 class HomePage extends StatefulWidget {
-  const HomePage({super.key, this.controller});
+  const HomePage({
+    super.key,
+    this.controller,
+    this.onNavigateToTasks,
+    this.onNavigateToAlerts,
+  });
 
   final RobotController? controller;
+  final VoidCallback? onNavigateToTasks;
+  final VoidCallback? onNavigateToAlerts;
 
   @override
   State<HomePage> createState() => _HomePageState();
@@ -114,11 +122,52 @@ class _HomePageState extends State<HomePage> {
                             children: [
                               Expanded(
                                 flex: 6,
-                                child: _OverviewColumn(
-                                  controller: _controller,
-                                  warning: warning,
-                                  onAreaSelected: (area) =>
-                                      _run(() => _controller.selectArea(area)),
+                                child: Column(
+                                  children: [
+                                    // Device overview (reuse RobotStatusCard)
+                                    RobotStatusCard(
+                                      status: _controller.currentStatus,
+                                    ),
+                                    const SizedBox(height: 12),
+                                    // Area selector (desktop only) placed after status and before current task
+                                    _AreaSelector(
+                                      selectedArea: status.area,
+                                      enabled: _controller.canSelectArea,
+                                      onSelected: (area) => _run(
+                                        () => _controller.selectArea(area),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 12),
+                                    // Current task card
+                                    CurrentTaskCard(
+                                      key: const Key('dashboard-current-task'),
+                                      title: '示例任务',
+                                      area: _controller.currentStatus.area,
+                                      statusText:
+                                          _controller.currentStatus.stateText,
+                                      progress:
+                                          _controller.currentStatus.progress,
+                                      eta: '约 12 分钟',
+                                      onTap: widget.onNavigateToTasks,
+                                    ),
+                                    const SizedBox(height: 12),
+                                    // Quick stats
+                                    DashboardStatsCard(
+                                      key: const Key('dashboard-stats'),
+                                      tasksToday: 3,
+                                      completed: 2,
+                                      area: '45 m²',
+                                      duration: '00:42:15',
+                                    ),
+                                    const SizedBox(height: 12),
+                                    // Recent alert
+                                    RecentAlertCard(
+                                      key: const Key('dashboard-recent-alert'),
+                                      warning: warning,
+                                      occurredAtText: '刚刚',
+                                      onTap: widget.onNavigateToAlerts,
+                                    ),
+                                  ],
                                 ),
                               ),
                               const SizedBox(width: 16),
@@ -136,11 +185,30 @@ class _HomePageState extends State<HomePage> {
                           )
                         : Column(
                             children: [
+                              // Device overview
                               RobotStatusCard(status: status),
-                              if (warning.hasWarning) ...[
-                                const SizedBox(height: 10),
-                                WarningCard(warning: warning),
-                              ],
+                              const SizedBox(height: 10),
+                              // Place control panel early so core buttons stay visible
+                              _buildControlPanel(),
+                              const SizedBox(height: 10),
+                              // Current task card
+                              CurrentTaskCard(
+                                key: const Key('dashboard-current-task'),
+                                title: '示例任务',
+                                area: status.area,
+                                statusText: status.stateText,
+                                progress: status.progress,
+                                eta: '约 12 分钟',
+                                onTap: widget.onNavigateToTasks,
+                              ),
+                              const SizedBox(height: 10),
+                              // Recent alert or warning card
+                              RecentAlertCard(
+                                key: const Key('dashboard-recent-alert'),
+                                warning: warning,
+                                occurredAtText: '刚刚',
+                                onTap: widget.onNavigateToAlerts,
+                              ),
                               const SizedBox(height: 10),
                               _AreaSelector(
                                 selectedArea: status.area,
@@ -149,7 +217,13 @@ class _HomePageState extends State<HomePage> {
                                     _run(() => _controller.selectArea(area)),
                               ),
                               const SizedBox(height: 10),
-                              _buildControlPanel(),
+                              DashboardStatsCard(
+                                key: const Key('dashboard-stats'),
+                                tasksToday: 3,
+                                completed: 2,
+                                area: '45 m²',
+                                duration: '00:42:15',
+                              ),
                               const SizedBox(height: 10),
                               DemoFaultPanel(controller: _controller),
                             ],
@@ -180,36 +254,7 @@ class _HomePageState extends State<HomePage> {
   }
 }
 
-class _OverviewColumn extends StatelessWidget {
-  const _OverviewColumn({
-    required this.controller,
-    required this.warning,
-    required this.onAreaSelected,
-  });
-
-  final RobotController controller;
-  final WarningResult warning;
-  final ValueChanged<String> onAreaSelected;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        RobotStatusCard(status: controller.currentStatus),
-        if (warning.hasWarning) ...[
-          const SizedBox(height: 12),
-          WarningCard(warning: warning),
-        ],
-        const SizedBox(height: 12),
-        _AreaSelector(
-          selectedArea: controller.currentStatus.area,
-          enabled: controller.canSelectArea,
-          onSelected: onAreaSelected,
-        ),
-      ],
-    );
-  }
-}
+// _OverviewColumn removed; dashboard widgets are integrated directly in HomePage.
 
 class _AreaSelector extends StatelessWidget {
   const _AreaSelector({
