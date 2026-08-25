@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 @immutable
 class AlertViewData {
   const AlertViewData({
+    this.recordId,
     required this.code,
     required this.title,
     required this.levelText,
@@ -15,7 +16,10 @@ class AlertViewData {
     this.isCurrent = true,
   });
 
+  final String? recordId;
   final String code;
+
+  String get selectionKey => recordId ?? code;
   final String title;
   final String levelText;
   final String occurredAtText;

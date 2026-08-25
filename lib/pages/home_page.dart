@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../controllers/robot_controller.dart';
+import '../models/cleaning_task.dart';
+import '../services/product_session.dart';
 import '../services/voice_control_service.dart';
 import '../widgets/control_panel.dart';
 import '../widgets/demo_fault_panel.dart';
@@ -14,11 +16,13 @@ class HomePage extends StatefulWidget {
   const HomePage({
     super.key,
     this.controller,
+    this.session,
     this.onNavigateToTasks,
     this.onNavigateToAlerts,
   });
 
   final RobotController? controller;
+  final ProductSession? session;
   final VoidCallback? onNavigateToTasks;
   final VoidCallback? onNavigateToAlerts;
 
@@ -34,9 +38,14 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
-    _ownsController = widget.controller == null;
-    _controller = widget.controller ?? RobotController();
-    _voiceService = VoiceControlService(controller: _controller);
+    _ownsController = widget.session == null && widget.controller == null;
+    _controller =
+        widget.session?.robotController ??
+        widget.controller ??
+        RobotController();
+    _voiceService =
+        widget.session?.voiceControlService ??
+        VoiceControlService(controller: _controller);
   }
 
   @override
@@ -82,6 +91,8 @@ class _HomePageState extends State<HomePage> {
       builder: (context, _) {
         final status = _controller.currentStatus;
         final warning = _controller.warningResult;
+        final task = widget.session?.currentTask;
+        final stats = widget.session?.dashboardStats;
 
         return Scaffold(
           appBar: AppBar(
@@ -141,23 +152,28 @@ class _HomePageState extends State<HomePage> {
                                     // Current task card
                                     CurrentTaskCard(
                                       key: const Key('dashboard-current-task'),
-                                      title: '示例任务',
-                                      area: _controller.currentStatus.area,
-                                      statusText:
-                                          _controller.currentStatus.stateText,
+                                      title: task?.name ?? '暂无任务',
+                                      area: task?.area ?? status.area,
+                                      statusText: _taskStatus(task),
                                       progress:
-                                          _controller.currentStatus.progress,
-                                      eta: '约 12 分钟',
+                                          task?.progress.round() ??
+                                          status.progress,
+                                      eta: _taskEta(task),
                                       onTap: widget.onNavigateToTasks,
                                     ),
                                     const SizedBox(height: 12),
                                     // Quick stats
                                     DashboardStatsCard(
                                       key: const Key('dashboard-stats'),
-                                      tasksToday: 3,
-                                      completed: 2,
-                                      area: '45 m²',
-                                      duration: '00:42:15',
+                                      tasksToday: stats?.todayTaskCount ?? 0,
+                                      completed:
+                                          stats?.todayCompletedCount ?? 0,
+                                      area:
+                                          '${(stats?.totalCleanedArea ?? 0).toStringAsFixed(1)} m²',
+                                      duration: _duration(
+                                        stats?.totalCleaningDuration ??
+                                            Duration.zero,
+                                      ),
                                     ),
                                     const SizedBox(height: 12),
                                     // Recent alert
@@ -194,11 +210,12 @@ class _HomePageState extends State<HomePage> {
                               // Current task card
                               CurrentTaskCard(
                                 key: const Key('dashboard-current-task'),
-                                title: '示例任务',
-                                area: status.area,
-                                statusText: status.stateText,
-                                progress: status.progress,
-                                eta: '约 12 分钟',
+                                title: task?.name ?? '暂无任务',
+                                area: task?.area ?? status.area,
+                                statusText: _taskStatus(task),
+                                progress:
+                                    task?.progress.round() ?? status.progress,
+                                eta: _taskEta(task),
                                 onTap: widget.onNavigateToTasks,
                               ),
                               const SizedBox(height: 10),
@@ -219,10 +236,13 @@ class _HomePageState extends State<HomePage> {
                               const SizedBox(height: 10),
                               DashboardStatsCard(
                                 key: const Key('dashboard-stats'),
-                                tasksToday: 3,
-                                completed: 2,
-                                area: '45 m²',
-                                duration: '00:42:15',
+                                tasksToday: stats?.todayTaskCount ?? 0,
+                                completed: stats?.todayCompletedCount ?? 0,
+                                area:
+                                    '${(stats?.totalCleanedArea ?? 0).toStringAsFixed(1)} m²',
+                                duration: _duration(
+                                  stats?.totalCleaningDuration ?? Duration.zero,
+                                ),
                               ),
                               const SizedBox(height: 10),
                               DemoFaultPanel(controller: _controller),
@@ -239,18 +259,72 @@ class _HomePageState extends State<HomePage> {
   }
 
   ControlPanel _buildControlPanel() {
+    final session = widget.session;
     return ControlPanel(
-      onStart: _controller.canStart ? () => _run(_controller.start) : null,
-      onPause: _controller.canPause ? () => _run(_controller.pause) : null,
-      onResume: _controller.canResume ? () => _run(_controller.resume) : null,
-      onStop: _controller.canStop ? () => _run(_controller.stop) : null,
+      onStart: (session?.canStartTask ?? _controller.canStart)
+          ? () => _run(
+              session == null ? _controller.start : session.startOrCreateTask,
+            )
+          : null,
+      onPause: (session?.canPauseTask ?? _controller.canPause)
+          ? () => _run(
+              session == null ? _controller.pause : session.pauseCurrentTask,
+            )
+          : null,
+      onResume: (session?.canResumeTask ?? _controller.canResume)
+          ? () => _run(
+              session == null ? _controller.resume : session.resumeCurrentTask,
+            )
+          : null,
+      onStop: (session?.canStopTask ?? _controller.canStop)
+          ? () => _run(
+              session == null ? _controller.stop : session.stopCurrentTask,
+            )
+          : null,
       onCharge: _controller.canCharge ? () => _run(_controller.charge) : null,
       onEmergency: _controller.canEmergencyStop
-          ? () => _run(_controller.emergencyStop)
+          ? () => _run(
+              session == null
+                  ? _controller.emergencyStop
+                  : session.emergencyStop,
+            )
           : null,
-      onReset: _controller.canReset ? () => _run(_controller.reset) : null,
+      onReset: _controller.canReset
+          ? () => _run(
+              session == null ? _controller.reset : session.resetEmergency,
+            )
+          : null,
       onVoice: _showVoiceControl,
     );
+  }
+
+  String _taskStatus(CleaningTask? task) {
+    if (task == null) {
+      return '待创建';
+    }
+    return switch (task.status) {
+      CleaningTaskStatus.pending => '待执行',
+      CleaningTaskStatus.running => '清扫中',
+      CleaningTaskStatus.paused => '已暂停',
+      CleaningTaskStatus.completed => '已完成',
+      CleaningTaskStatus.failed => '失败',
+      CleaningTaskStatus.cancelled => '已停止',
+    };
+  }
+
+  String _taskEta(CleaningTask? task) {
+    if (task == null || task.status == CleaningTaskStatus.completed) {
+      return '--';
+    }
+    final seconds = ((100 - task.progress) / 5).ceil().clamp(0, 999);
+    return '约 $seconds 秒';
+  }
+
+  String _duration(Duration value) {
+    final hours = value.inHours.toString().padLeft(2, '0');
+    final minutes = (value.inMinutes % 60).toString().padLeft(2, '0');
+    final seconds = (value.inSeconds % 60).toString().padLeft(2, '0');
+    return '$hours:$minutes:$seconds';
   }
 }
 

@@ -58,7 +58,7 @@ class AlertsPage extends StatefulWidget {
 class _AlertsPageState extends State<AlertsPage>
     with SingleTickerProviderStateMixin {
   late final TabController _tabController;
-  String? _selectedAlertCode;
+  String? _selectedAlertKey;
   int _lastTabIndex = 0;
 
   @override
@@ -66,8 +66,8 @@ class _AlertsPageState extends State<AlertsPage>
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
     _lastTabIndex = _tabController.index;
-    _selectedAlertCode = _getCurrentAlerts().isNotEmpty
-        ? _getCurrentAlerts().first.code
+    _selectedAlertKey = _getCurrentAlerts().isNotEmpty
+        ? _getCurrentAlerts().first.selectionKey
         : null;
   }
 
@@ -75,9 +75,9 @@ class _AlertsPageState extends State<AlertsPage>
   void didUpdateWidget(covariant AlertsPage oldWidget) {
     super.didUpdateWidget(oldWidget);
     final activeAlerts = _getActiveAlerts();
-    if (_selectedAlertCode != null &&
-        !activeAlerts.any((alert) => alert.code == _selectedAlertCode)) {
-      _selectedAlertCode = null;
+    if (_selectedAlertKey != null &&
+        !activeAlerts.any((alert) => alert.selectionKey == _selectedAlertKey)) {
+      _selectedAlertKey = null;
     }
   }
 
@@ -92,7 +92,7 @@ class _AlertsPageState extends State<AlertsPage>
       return;
     }
     _lastTabIndex = index;
-    setState(() => _selectedAlertCode = null);
+    setState(() => _selectedAlertKey = null);
   }
 
   List<AlertViewData> _getCurrentAlerts() => widget.currentAlerts;
@@ -103,9 +103,9 @@ class _AlertsPageState extends State<AlertsPage>
       _tabController.index == 0 ? _getCurrentAlerts() : _getHistoryAlerts();
 
   AlertViewData? _selectedAlert() {
-    if (_selectedAlertCode == null) return null;
+    if (_selectedAlertKey == null) return null;
     return _getActiveAlerts()
-        .where((alert) => alert.code == _selectedAlertCode)
+        .where((alert) => alert.selectionKey == _selectedAlertKey)
         .firstOrNull();
   }
 
@@ -141,13 +141,14 @@ class _AlertsPageState extends State<AlertsPage>
                 separatorBuilder: (_, _) => const SizedBox(height: 12),
                 itemBuilder: (context, index) {
                   final alert = activeAlerts[index];
-                  final isSelected = selectedAlert?.code == alert.code;
+                  final isSelected =
+                      selectedAlert?.selectionKey == alert.selectionKey;
                   return AlertListCard(
                     alert: alert,
                     selected: isSelected,
                     onViewDetail: () {
                       widget.onViewDetail?.call(alert);
-                      setState(() => _selectedAlertCode = alert.code);
+                      setState(() => _selectedAlertKey = alert.selectionKey);
                     },
                   );
                 },
@@ -203,14 +204,16 @@ class _AlertsPageState extends State<AlertsPage>
                                 itemBuilder: (context, index) {
                                   final alert = activeAlerts[index];
                                   final isSelected =
-                                      selectedAlert?.code == alert.code;
+                                      selectedAlert?.selectionKey ==
+                                      alert.selectionKey;
                                   return AlertListCard(
                                     alert: alert,
                                     selected: isSelected,
                                     onViewDetail: () {
                                       widget.onViewDetail?.call(alert);
                                       setState(
-                                        () => _selectedAlertCode = alert.code,
+                                        () => _selectedAlertKey =
+                                            alert.selectionKey,
                                       );
                                     },
                                   );

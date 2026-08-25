@@ -2,15 +2,17 @@ import 'package:flutter/material.dart';
 
 import 'controllers/robot_controller.dart';
 import 'navigation/app_shell.dart';
+import 'services/product_session.dart';
 
 void main() {
   runApp(const QingQiongApp());
 }
 
 class QingQiongApp extends StatelessWidget {
-  const QingQiongApp({super.key, this.controller});
+  const QingQiongApp({super.key, this.controller, this.session});
 
   final RobotController? controller;
+  final ProductSession? session;
 
   @override
   Widget build(BuildContext context) {
@@ -29,7 +31,7 @@ class QingQiongApp extends StatelessWidget {
           border: OutlineInputBorder(),
         ),
       ),
-      home: AppShell(controller: controller),
+      home: AppShell(controller: controller, session: session),
     );
   }
 }

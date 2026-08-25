@@ -1,6 +1,9 @@
 import '../controllers/robot_controller.dart';
 import '../utils/voice_command_parser.dart';
 
+typedef VoiceCommandDispatcher =
+    ControlResult Function(VoiceCommandResult command);
+
 class VoiceExecutionResult {
   final String inputText;
   final VoiceCommandResult parseResult;
@@ -26,11 +29,15 @@ class VoiceExecutionResult {
 }
 
 class VoiceControlService {
-  VoiceControlService({required this.controller, VoiceCommandParser? parser})
-    : _parser = parser ?? VoiceCommandParser();
+  VoiceControlService({
+    required this.controller,
+    VoiceCommandParser? parser,
+    this.dispatcher,
+  }) : _parser = parser ?? VoiceCommandParser();
 
   final RobotController controller;
   final VoiceCommandParser _parser;
+  final VoiceCommandDispatcher? dispatcher;
 
   static const Map<String, String> _shortCommandAliases = <String, String>{
     '开始': '开始清扫',
@@ -55,7 +62,8 @@ class VoiceControlService {
       );
     }
 
-    final controlResult = _dispatch(parseResult);
+    final controlResult =
+        dispatcher?.call(parseResult) ?? _dispatch(parseResult);
     return VoiceExecutionResult(
       inputText: inputText,
       parseResult: parseResult,

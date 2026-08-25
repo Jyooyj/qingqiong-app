@@ -11,10 +11,16 @@ class DemoSimulationEngine {
   DemoSimulationEngine({
     required this.taskController,
     required this.robotController,
+    this.tickInterval = const Duration(seconds: 1),
+    this.progressPerTick = 5,
+    this.cleanedAreaPerTick = 2.5,
   });
 
   final TaskController taskController;
   final RobotController robotController;
+  final Duration tickInterval;
+  final double progressPerTick;
+  final double cleanedAreaPerTick;
 
   Timer? _timer;
   String? _activeTaskId;
@@ -61,11 +67,11 @@ class DemoSimulationEngine {
 
     _notifyMapState();
 
-    _timer = Timer.periodic(
-      const Duration(seconds: 1),
-      (_) => _tick(),
-    );
+    _timer = Timer.periodic(tickInterval, (_) => _tick());
   }
+
+  /// 提供给集成测试和演示控制器的确定性单步推进入口。
+  void advanceOneTick() => _tick();
 
   void _tick() {
     final taskId = _activeTaskId;
@@ -91,11 +97,13 @@ class DemoSimulationEngine {
 
     _tickCount++;
 
-    final nextProgress = (task.progress + 5).clamp(0.0, 100.0).toDouble();
+    final nextProgress = (task.progress + progressPerTick)
+        .clamp(0.0, 100.0)
+        .toDouble();
 
-    final nextCleanedArea = task.cleanedArea + 2.5;
+    final nextCleanedArea = task.cleanedArea + cleanedAreaPerTick;
 
-    final nextElapsed = task.elapsed + const Duration(seconds: 1);
+    final nextElapsed = task.elapsed + tickInterval;
 
     taskController.updateTaskProgress(
       taskId,
@@ -103,6 +111,8 @@ class DemoSimulationEngine {
       cleanedArea: nextCleanedArea,
       elapsed: nextElapsed,
     );
+
+    robotController.advanceProgress(progressPerTick.round());
 
     _advanceMap(nextProgress);
 
@@ -116,7 +126,9 @@ class DemoSimulationEngine {
     }
 
     if (nextProgress >= 100) {
-      robotController.stopCleaning();
+      if (robotController.currentStatus.state == RobotState.cleaning) {
+        robotController.stop();
+      }
 
       taskController.completeTask(
         taskId,
@@ -137,19 +149,17 @@ class DemoSimulationEngine {
 
     final normalizedProgress = (progress / 100).clamp(0.0, 1.0);
 
-    final pathIndex =
-        (normalizedProgress * (path.length - 1)).round().clamp(
-              0,
-              path.length - 1,
-            );
+    final pathIndex = (normalizedProgress * (path.length - 1)).round().clamp(
+      0,
+      path.length - 1,
+    );
 
     final nextPosition = path[pathIndex];
 
-    final updatedCleanedPath = List<MapPoint>.from(
-      _mapState.cleanedPath,
-    );
+    final updatedCleanedPath = List<MapPoint>.from(_mapState.cleanedPath);
 
-    final shouldAddPoint = updatedCleanedPath.isEmpty ||
+    final shouldAddPoint =
+        updatedCleanedPath.isEmpty ||
         updatedCleanedPath.last.x != nextPosition.x ||
         updatedCleanedPath.last.y != nextPosition.y;
 

@@ -13,6 +13,7 @@ class ProfilePage extends StatelessWidget {
     this.softwareVersion = 'V1.0.0',
     this.connectionStatusText = '已连接',
     this.demoModeEnabled = true,
+    this.voiceStatusText = '可用',
     this.onDemoModeChanged,
     this.onVoiceSettingsTap,
     this.onAboutTap,
@@ -23,6 +24,7 @@ class ProfilePage extends StatelessWidget {
   final String softwareVersion;
   final String connectionStatusText;
   final bool demoModeEnabled;
+  final String voiceStatusText;
   final ValueChanged<bool>? onDemoModeChanged;
   final VoidCallback? onVoiceSettingsTap;
   final VoidCallback? onAboutTap;
@@ -59,7 +61,7 @@ class ProfilePage extends StatelessWidget {
                       const SizedBox(height: 16),
                       VoiceSettingsTile(
                         onTap: onVoiceSettingsTap,
-                        statusText: '可用',
+                        statusText: voiceStatusText,
                       ),
                       const SizedBox(height: 16),
                       AboutSection(

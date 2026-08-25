@@ -5,12 +5,14 @@ class TaskDetailView extends StatelessWidget {
   const TaskDetailView({
     super.key,
     required this.task,
+    this.onExecute,
     this.onPause,
     this.onResume,
     this.onStop,
   });
 
   final TaskViewData task;
+  final void Function(TaskViewData task)? onExecute;
   final void Function(TaskViewData task)? onPause;
   final void Function(TaskViewData task)? onResume;
   final void Function(TaskViewData task)? onStop;
@@ -19,6 +21,7 @@ class TaskDetailView extends StatelessWidget {
   Widget build(BuildContext context) {
     final isRunning = task.status == 'running';
     final isPaused = task.status == 'paused';
+    final isPending = task.status == 'pending';
     final isCompleted = task.status == 'completed';
 
     return Card(
@@ -46,7 +49,13 @@ class TaskDetailView extends StatelessWidget {
             const SizedBox(height: 4),
             Text('开始时间: ${task.startTimeText ?? '-'}'),
             const SizedBox(height: 12),
-            if (isRunning) ...[
+            if (isPending) ...[
+              FilledButton(
+                key: const Key('detail-start'),
+                onPressed: onExecute == null ? null : () => onExecute!(task),
+                child: const Text('开始任务'),
+              ),
+            ] else if (isRunning) ...[
               Row(
                 children: [
                   FilledButton(

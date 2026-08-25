@@ -33,6 +33,22 @@ class _TasksPageState extends State<TasksPage> {
   TaskViewData? _selected;
   bool _showNewForm = false;
 
+  @override
+  void didUpdateWidget(covariant TasksPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final selected = _selected;
+    if (selected == null || widget.tasks == null) {
+      return;
+    }
+    for (final task in widget.tasks!) {
+      if (task.id == selected.id) {
+        _selected = task;
+        return;
+      }
+    }
+    _selected = null;
+  }
+
   List<TaskViewData> get _source => widget.tasks ?? _sampleData();
 
   List<TaskViewData> get _filtered {
@@ -144,6 +160,7 @@ class _TasksPageState extends State<TasksPage> {
                           ] else if (_selected != null) ...[
                             TaskDetailView(
                               task: _selected!,
+                              onExecute: widget.onExecute,
                               onPause: widget.onPause,
                               onResume: widget.onResume,
                               onStop: widget.onStop,
@@ -180,6 +197,7 @@ class _TasksPageState extends State<TasksPage> {
     if (_selected != null) {
       return TaskDetailView(
         task: _selected!,
+        onExecute: widget.onExecute,
         onPause: widget.onPause,
         onResume: widget.onResume,
         onStop: widget.onStop,
