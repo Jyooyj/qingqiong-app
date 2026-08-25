@@ -44,19 +44,21 @@ class VoiceCommandParser {
     _CommandRule('emergencyStop', <RegExp>[
       RegExp(r'^紧急停止(?:[abc]区(?:清扫)?)?$'),
       RegExp(r'^立即停止(?:当前)?(?:[abc]区)?(?:清扫)?(?:任务)?$'),
-      RegExp(r'^(?:马上急停|启动急停|紧急制动|危险快停下|马上停下)$'),
+      RegExp(r'^(?:马上急停|启动急停|紧急制动|危险快停下|马上停下|立即停止设备)$'),
     ]),
-    _CommandRule('reset', <RegExp>[RegExp(r'^(?:解除急停|解除紧急状态|执行复位|确认复位)$')]),
+    _CommandRule('reset', <RegExp>[
+      RegExp(r'^(?:解除急停|解除紧急状态|执行复位|确认复位|恢复设备)$'),
+    ]),
     _CommandRule('stop', <RegExp>[
-      RegExp(r'^(?:停止任务|停止清扫|结束清扫|终止任务|结束任务)(?:[abc]区)?$'),
+      RegExp(r'^(?:停止任务|停止清扫|结束清扫|终止任务|结束任务|结束当前任务)(?:[abc]区)?$'),
       RegExp(r'^结束[abc]区清扫$'),
     ]),
     _CommandRule('pause', <RegExp>[
-      RegExp(r'^(?:暂停一下|暂停任务|暂停清扫|先停一下|任务暂停)(?:[abc]区)?$'),
+      RegExp(r'^(?:暂停一下|暂停任务|暂停清扫|先停一下|任务暂停|暂停当前任务)(?:[abc]区)?$'),
       RegExp(r'^暂停[abc]区的清扫任务$'),
     ]),
     _CommandRule('resume', <RegExp>[
-      RegExp(r'^(?:继续清扫|继续任务|恢复清扫|恢复任务|接着清扫|继续工作)(?:[abc]区)?$'),
+      RegExp(r'^(?:继续清扫|继续任务|恢复清扫|恢复任务|接着清扫|继续工作|继续刚才的任务)(?:[abc]区)?$'),
     ]),
     _CommandRule('charge', <RegExp>[
       RegExp(r'^(?:返回充电桩|回去充电|开始充电|返回充电|去充电|回充|回充电桩)$'),
@@ -64,6 +66,7 @@ class VoiceCommandParser {
     _CommandRule('start', <RegExp>[
       RegExp(r'^(?:开始清扫|开始任务|启动清扫|执行清扫任务|开始工作|去清扫)(?:[abc]区)?$'),
       RegExp(r'^(?:执行[abc]区清扫|清扫[abc]区)$'),
+      RegExp(r'^(?:去|开始)[abc]区(?:清扫|打扫)$'),
     ]),
   ];
 
