@@ -1,3 +1,4 @@
+import '../widgets/campus/campus_demo_page.dart';
 import 'package:flutter/material.dart';
 import '../widgets/map/map_view_data.dart';
 import '../widgets/map/cleaning_map_view.dart';
@@ -104,6 +105,17 @@ class MapPage extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                FilledButton.icon(
+                  key: const Key('open-campus-map'),
+                  onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => const CampusDemoPage(),
+                    ),
+                  ),
+                  icon: const Icon(Icons.school_outlined),
+                  label: const Text('查看校园地图'),
+                ),
+                const SizedBox(height: 12),
                 CleaningMapView(
                   zones: effectiveZones,
                   robotPosition: effectiveRobot,
