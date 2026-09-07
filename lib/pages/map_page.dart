@@ -1,4 +1,5 @@
 import '../widgets/campus/campus_demo_page.dart';
+import '../services/campus_demo_coordinator.dart';
 import 'package:flutter/material.dart';
 import '../widgets/map/map_view_data.dart';
 import '../widgets/map/cleaning_map_view.dart';
@@ -13,6 +14,7 @@ class MapPage extends StatelessWidget {
     this.obstacles = const <MapObstacleView>[],
     this.chargingStation,
     this.highlightedWarningCode,
+    this.campusCoordinator,
   });
 
   final List<MapZoneView> zones;
@@ -22,6 +24,7 @@ class MapPage extends StatelessWidget {
   final List<MapObstacleView> obstacles;
   final MapPointView? chargingStation;
   final String? highlightedWarningCode;
+  final CampusDemoCoordinator? campusCoordinator;
 
   @override
   Widget build(BuildContext context) {
@@ -107,11 +110,14 @@ class MapPage extends StatelessWidget {
               children: [
                 FilledButton.icon(
                   key: const Key('open-campus-map'),
-                  onPressed: () => Navigator.of(context).push(
-                    MaterialPageRoute<void>(
-                      builder: (_) => const CampusDemoPage(),
-                    ),
-                  ),
+                  onPressed: campusCoordinator == null
+                      ? null
+                      : () => Navigator.of(context).push(
+                          MaterialPageRoute<void>(
+                            builder: (_) =>
+                                CampusDemoPage(coordinator: campusCoordinator!),
+                          ),
+                        ),
                   icon: const Icon(Icons.school_outlined),
                   label: const Text('查看校园地图'),
                 ),

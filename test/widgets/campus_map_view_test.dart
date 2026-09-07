@@ -5,8 +5,26 @@ import 'package:robot_cleaner/models/campus/campus_point.dart';
 import 'package:robot_cleaner/widgets/campus/campus_map_view.dart';
 import 'package:robot_cleaner/widgets/campus/campus_demo_page.dart';
 import 'package:robot_cleaner/pages/map_page.dart';
+import 'package:robot_cleaner/adapters/location/demo_location_adapter.dart';
+import 'package:robot_cleaner/services/campus_demo_coordinator.dart';
+import 'package:robot_cleaner/services/product_session.dart';
 
 void main() {
+  CampusDemoCoordinator createCoordinator() {
+    final session = ProductSession();
+    final adapter = DemoLocationAdapter();
+    final coordinator = CampusDemoCoordinator(
+      session: session,
+      locationAdapter: adapter,
+    );
+    addTearDown(() {
+      coordinator.dispose();
+      adapter.dispose();
+      session.dispose();
+    });
+    return coordinator;
+  }
+
   testWidgets('selection callback and external selection stay controlled', (
     tester,
   ) async {
@@ -80,7 +98,9 @@ void main() {
       tester.view.devicePixelRatio = 1;
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
-      await tester.pumpWidget(const MaterialApp(home: CampusDemoPage()));
+      await tester.pumpWidget(
+        MaterialApp(home: CampusDemoPage(coordinator: createCoordinator())),
+      );
       await tester.tap(find.byKey(const Key('campus-zone-lab_building')));
       await tester.pumpAndSettle();
       expect(find.text('当前目标：实验楼'), findsOneWidget);
@@ -89,7 +109,9 @@ void main() {
   }
 
   testWidgets('existing map opens campus preview and returns', (tester) async {
-    await tester.pumpWidget(const MaterialApp(home: MapPage()));
+    await tester.pumpWidget(
+      MaterialApp(home: MapPage(campusCoordinator: createCoordinator())),
+    );
     await tester.tap(find.byKey(const Key('open-campus-map')));
     await tester.pumpAndSettle();
     expect(find.byType(CampusDemoPage), findsOneWidget);
