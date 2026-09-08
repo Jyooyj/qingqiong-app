@@ -1,3 +1,4 @@
+import '../widgets/geo_map/campus_geo_preview_page.dart';
 import '../widgets/campus/campus_demo_page.dart';
 import '../services/campus_demo_coordinator.dart';
 import 'package:flutter/material.dart';
@@ -120,6 +121,17 @@ class MapPage extends StatelessWidget {
                         ),
                   icon: const Icon(Icons.school_outlined),
                   label: const Text('查看校园地图'),
+                ),
+                const SizedBox(height: 12),
+                OutlinedButton.icon(
+                  key: const Key('open-geo-map'),
+                  onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => const CampusGeoPreviewPage(),
+                    ),
+                  ),
+                  icon: const Icon(Icons.public),
+                  label: const Text('查看真实地理地图'),
                 ),
                 const SizedBox(height: 12),
                 CleaningMapView(
