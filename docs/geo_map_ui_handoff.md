@@ -45,7 +45,7 @@ flutter run -d chrome
 | enableCoordinatePicker | bool，默认false，且仅debug模式生效 |
 | onCoordinatePicked | ValueChanged<LatLng>? |
 | onFallback | VoidCallback?，由宿主决定备用地图入口 |
-| tileLoadTimeout | Duration，默认20秒，首次无成功瓦片时提示失败 |
+| tileLoadTimeout | Duration，默认20秒，当前视野无成功瓦片时提示不可用 |
 | tileProviderFactory | TileProvider Function()?，主要用于注入无网络测试瓦片；每次重试需返回新实例，由 TileLayer 管理生命周期 |
 
 CampusGeoZoneView：id / name / center(LatLng) / polygon(List<LatLng>)。
@@ -86,13 +86,13 @@ CampusGeoMapView(
 
 temporary_geo_data.dart 只提供校园附近三个临时区域和示意路线，用于完整 UI 验证。标签带“测试”，坐标、区域边界和路线没有正式校准，可能穿越建筑，不能当作正式路线交给机器人。校准数据由 2 号负责。中心点只用来找到上海海洋大学临港校区附近，参考 OSM 校园对象 https://www.openstreetmap.org/way/538422231 。
 
-机器人与充电点距离小于2米时显示两个图标的组合标记，不表示设备正在充电。底图任意瓦片失败会保留明确提示，成功的其他瓦片仍可显示；网络恢复后可点击重试清除旧提示。首次无成功瓦片超过20秒也会提示。未实现自动切换旧坐标地图，避免把不同坐标系错误混用。
+机器人与充电点距离小于2米时显示两个图标的组合标记，不表示设备正在充电。仅统计当前视野、当前缩放级别的瓦片。部分失败时提示“部分底图加载失败，已加载区域仍可使用”；全部失败或当前视野20秒没有成功瓦片时提示暂不可用。瓦片恢复、移出失败区域或重试后重新判断提示，不保留旧视野错误。未实现自动切换旧坐标地图，避免把不同坐标系错误混用。
 
 ## 验证
 
 基线 flutter analyze --no-pub：PASS；基线测试367项全部通过。
 当前 flutter analyze --no-pub：PASS；flutter test --no-pub：376项全部通过。
-新增9项测试覆盖 Polygon 回调、受控选区、路线显示/清空、外部位置更新与不抢视野、缩放拖动、坐标拾取/复制/关闭、失败重试保留图层，以及360×800、390×844、430×932、1366×768。
+新增9项测试覆盖 Polygon 回调、受控选区、路线显示/清空、外部位置更新与不抢视野、缩放拖动、坐标拾取/复制/关闭、局部失败提示、移出失败视野自动清除提示、失败重试保留图层，以及360×800、390×844、430×932、1366×768。
 
 测试注入本地图片，不访问公用瓦片服务器；真实网络显示另行浏览器验证。
 

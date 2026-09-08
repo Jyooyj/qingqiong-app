@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -57,6 +58,8 @@ class _CampusGeoMapViewState extends State<CampusGeoMapView> {
   final LayerHitNotifier<String> _hits = ValueNotifier(null);
   Timer? _timeout;
   bool _ready = false, _tileError = false, _loaded = false;
+  bool _timedOut = false, _statusQueued = false;
+  final Map<TileImage, bool?> _tileStates = {};
   int _generation = 0;
   TileProvider? _provider;
   LatLng? _picked;
@@ -79,8 +82,12 @@ class _CampusGeoMapViewState extends State<CampusGeoMapView> {
 
   void _armTimeout() {
     _timeout?.cancel();
+    _timedOut = false;
     _timeout = Timer(widget.tileLoadTimeout, () {
-      if (mounted && !_loaded) setState(() => _tileError = true);
+      if (mounted) {
+        _timedOut = true;
+        _refreshTileStatus();
+      }
     });
   }
 
@@ -98,14 +105,58 @@ class _CampusGeoMapViewState extends State<CampusGeoMapView> {
         .firstOrNull;
     if (selected != null) _controller.move(selected.center, 17);
   });
-  void _tileFinished(bool failed, int generation) {
+  bool _visibleTile(TileImage tile) {
+    if (!_ready) return false;
+    final c = tile.coordinates;
+    if (c.z != _controller.camera.zoom.round().clamp(0, 19)) return false;
+    final n = math.pow(2, c.z);
+    double latitude(num y) {
+      final v = math.pi * (1 - 2 * y / n);
+      return math.atan((math.exp(v) - math.exp(-v)) / 2) * 180 / math.pi;
+    }
+
+    final bounds = LatLngBounds(
+      LatLng(latitude(c.y + 1), c.x / n * 360 - 180),
+      LatLng(latitude(c.y), (c.x + 1) / n * 360 - 180),
+    );
+    return _controller.camera.visibleBounds.isOverlapping(bounds);
+  }
+
+  void _tileChanged(
+    TileImage tile,
+    bool? failed,
+    int generation, {
+    bool removed = false,
+  }) {
     if (!mounted || generation != _generation) return;
+    if (removed) {
+      _tileStates.remove(tile);
+    } else {
+      _tileStates[tile] = failed;
+    }
+    _refreshTileStatus();
+  }
+
+  void _refreshTileStatus() {
+    if (!mounted || _statusQueued) return;
+    _statusQueued = true;
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted || generation != _generation) return;
-      if (failed && !_tileError) setState(() => _tileError = true);
-      if (!failed && !_loaded) {
-        _timeout?.cancel();
-        setState(() => _loaded = true);
+      _statusQueued = false;
+      if (!mounted || !_ready) return;
+      final visible = _tileStates.entries
+          .where((e) => _visibleTile(e.key))
+          .map((e) => e.value)
+          .toList();
+      final loaded = visible.contains(false);
+      final failed = visible.contains(true);
+      // No successful tile does not imply offline while requests are pending.
+      final allFailed = visible.isNotEmpty && visible.every((v) => v == true);
+      final error = loaded ? failed : allFailed || _timedOut;
+      if (_loaded != loaded || _tileError != error) {
+        setState(() {
+          _loaded = loaded;
+          _tileError = error;
+        });
       }
     });
     WidgetsBinding.instance.ensureVisualUpdate();
@@ -114,6 +165,7 @@ class _CampusGeoMapViewState extends State<CampusGeoMapView> {
   void _retry() {
     setState(() {
       _generation++;
+      _tileStates.clear();
       _tileError = false;
       _loaded = false;
       _provider = widget.tileProviderFactory?.call();
@@ -178,6 +230,11 @@ class _CampusGeoMapViewState extends State<CampusGeoMapView> {
                       onMapReady: () {
                         _ready = true;
                         _scheduleFocus();
+                        _refreshTileStatus();
+                      },
+                      onPositionChanged: (_, _) {
+                        _armTimeout();
+                        _refreshTileStatus();
                       },
                       onTap: (_, point) {
                         final hit = _hits.value?.hitValues.firstOrNull;
@@ -200,12 +257,18 @@ class _CampusGeoMapViewState extends State<CampusGeoMapView> {
                         tileProvider: _provider,
                         maxNativeZoom: 19,
                         tileDisplay: const TileDisplay.instantaneous(),
-                        errorTileCallback: (_, error, stack) =>
-                            _tileFinished(true, generation),
+                        errorTileCallback: (tile, error, stack) =>
+                            _tileChanged(tile, true, generation),
                         tileBuilder: (context, child, tile) => _TileObserver(
                           tile: tile,
                           onFinished: (failed) =>
-                              _tileFinished(failed, generation),
+                              _tileChanged(tile, failed, generation),
+                          onRemoved: () => _tileChanged(
+                            tile,
+                            null,
+                            generation,
+                            removed: true,
+                          ),
                           child: child,
                         ),
                       ),
@@ -414,6 +477,9 @@ class _CampusGeoMapViewState extends State<CampusGeoMapView> {
                       left: 10,
                       right: 66,
                       child: CampusGeoMapFallback(
+                        message: _loaded
+                            ? '部分底图加载失败，已加载区域仍可使用。'
+                            : '当前视野底图暂不可用，请检查网络或重试。位置与路线图层仍保留。',
                         onRetry: _retry,
                         onFallback: widget.onFallback,
                       ),
@@ -535,10 +601,12 @@ class _TileObserver extends StatefulWidget {
   const _TileObserver({
     required this.tile,
     required this.onFinished,
+    required this.onRemoved,
     required this.child,
   });
   final TileImage tile;
-  final ValueChanged<bool> onFinished;
+  final ValueChanged<bool?> onFinished;
+  final VoidCallback onRemoved;
   final Widget child;
   @override
   State<_TileObserver> createState() => _TileObserverState();
@@ -546,10 +614,15 @@ class _TileObserver extends StatefulWidget {
 
 class _TileObserverState extends State<_TileObserver> {
   bool _reported = false;
+  bool? _lastState;
   void _check() {
-    if (!_reported && widget.tile.loadFinishedAt != null) {
+    final failed = widget.tile.loadFinishedAt == null
+        ? null
+        : widget.tile.loadError;
+    if (!_reported || failed != _lastState) {
       _reported = true;
-      widget.onFinished(widget.tile.loadError);
+      _lastState = failed;
+      widget.onFinished(failed);
     }
   }
 
@@ -565,6 +638,7 @@ class _TileObserverState extends State<_TileObserver> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.tile != widget.tile) {
       oldWidget.tile.removeListener(_check);
+      oldWidget.onRemoved();
       _reported = false;
       widget.tile.addListener(_check);
       _check();
@@ -574,6 +648,7 @@ class _TileObserverState extends State<_TileObserver> {
   @override
   void dispose() {
     widget.tile.removeListener(_check);
+    widget.onRemoved();
     super.dispose();
   }
 

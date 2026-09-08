@@ -213,7 +213,7 @@ void main() {
     final mapContext = tester.element(find.byType(FlutterMap));
     final tile = TileImage(
       vsync: tester,
-      coordinates: const TileCoordinates(1, 1, 1),
+      coordinates: const TileCoordinates(54957, 26851, 16),
       imageProvider: const AssetImage('unused'),
       onLoadComplete: (_) {},
       onLoadError: (_, _, _) {},
@@ -221,14 +221,27 @@ void main() {
       cancelLoading: Completer<void>(),
       tileDisplay: const TileDisplay.instantaneous(),
     );
+    await tester.runAsync(() async {
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+    });
+    await settle(tester);
     tiles.errorTileCallback!(tile, Exception('offline'), StackTrace.current);
     await settle(tester);
     expect(mapContext.mounted, isTrue);
-    expect(find.byType(CampusGeoMapFallback), findsOneWidget);
+    expect(find.text('部分底图加载失败，已加载区域仍可使用。'), findsOneWidget);
     expect(find.byKey(const Key('geo-robot')), findsOneWidget);
     await tester.tap(find.text('重试底图'));
     await settle(tester);
-    expect(tester.widget<TileLayer>(find.byType(TileLayer)).key, isNot(oldKey));
+    final newTiles = tester.widget<TileLayer>(find.byType(TileLayer));
+    expect(newTiles.key, isNot(oldKey));
+    newTiles.errorTileCallback!(tile, Exception('offline'), StackTrace.current);
+    await settle(tester);
+    final controller = tester
+        .widget<FlutterMap>(find.byType(FlutterMap))
+        .mapController!;
+    controller.move(const LatLng(31.2, 121.5), 16);
+    await settle(tester);
+    expect(find.byType(CampusGeoMapFallback), findsNothing);
     tile.dispose();
   });
 
