@@ -68,7 +68,7 @@ class _CampusGeoMapViewState extends State<CampusGeoMapView> {
       .where(
         (z) =>
             validGeoPoint(z.center) &&
-            z.polygon.length >= 3 &&
+            (z.polygon.isEmpty || z.polygon.length >= 3) &&
             z.polygon.every(validGeoPoint),
       )
       .toList();
@@ -275,7 +275,9 @@ class _CampusGeoMapViewState extends State<CampusGeoMapView> {
                       PolygonLayer<String>(
                         hitNotifier: _hits,
                         polygons: [
-                          for (final zone in zones)
+                          for (final zone in zones.where(
+                            (z) => z.polygon.length >= 3,
+                          ))
                             Polygon<String>(
                               points: zone.polygon,
                               hitValue: zone.id,

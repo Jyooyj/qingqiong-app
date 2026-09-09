@@ -85,6 +85,42 @@ Future<void> settle(WidgetTester tester) async {
 }
 
 void main() {
+  testWidgets(
+    'center-only zone remains selectable without an invented polygon',
+    (tester) async {
+      String? selected;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: CampusGeoMapView(
+              zones: [
+                CampusGeoZoneView(
+                  id: 'teaching_1',
+                  name: '第一教学楼',
+                  center: center,
+                  polygon: const [],
+                ),
+              ],
+              onZoneTap: (id) => selected = id,
+              tileProviderFactory: () => _Tiles(),
+            ),
+          ),
+        ),
+      );
+      await settle(tester);
+      expect(
+        tester
+            .widget<PolygonLayer<String>>(find.byType(PolygonLayer<String>))
+            .polygons,
+        isEmpty,
+      );
+      await tester.tap(find.byKey(const Key('geo-zone-teaching_1')));
+      expect(selected, 'teaching_1');
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox());
+    },
+  );
+
   testWidgets('layers are controlled and polygon tap returns only the id', (
     tester,
   ) async {

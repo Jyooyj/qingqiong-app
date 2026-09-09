@@ -3,7 +3,8 @@ import "package:latlong2/latlong.dart";
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'campus_geo_map_view.dart';
-import 'temporary_geo_data.dart';
+import '../../data/campus_geo/campus_geo_map_data.dart';
+import '../../models/campus_geo/campus_geo_point.dart';
 
 /// Local, manual UI preview. No timer or business coordinator.
 class CampusGeoPreviewPage extends StatefulWidget {
@@ -13,6 +14,23 @@ class CampusGeoPreviewPage extends StatefulWidget {
 }
 
 class _CampusGeoPreviewPageState extends State<CampusGeoPreviewPage> {
+  static LatLng _point(CampusGeoPoint point) =>
+      LatLng(point.latitude, point.longitude);
+  static final _zones = CampusGeoMapData.zones
+      .map(
+        (zone) => CampusGeoZoneView(
+          id: zone.id,
+          name: zone.name,
+          center: _point(zone.center),
+          polygon: zone.polygon.map(_point).toList(),
+        ),
+      )
+      .toList();
+  static final _station = CampusGeoMarkerView(
+    id: CampusGeoMapData.chargingStation.id,
+    label: 'Demo充电点',
+    position: _point(CampusGeoMapData.chargingStation.position),
+  );
   String? _selected;
   int _step = 0;
   bool _obstacle = false, _picker = false;
@@ -22,10 +40,13 @@ class _CampusGeoPreviewPageState extends State<CampusGeoPreviewPage> {
   });
   @override
   Widget build(BuildContext context) {
-    final zone = TemporaryGeoData.zones
-        .where((z) => z.id == _selected)
-        .firstOrNull;
-    final path = zone == null ? const <LatLng>[] : TemporaryGeoData.route(zone);
+    final zone = _zones.where((z) => z.id == _selected).firstOrNull;
+    final path = zone == null
+        ? const <LatLng>[]
+        : (CampusGeoMapData.routeForZone(
+                zone.id,
+              )?.plannedPath.map(_point).toList() ??
+              const <LatLng>[]);
     final step = path.isEmpty ? 0 : _step.clamp(0, path.length - 1);
     return Scaffold(
       appBar: AppBar(title: const Text('真实地理地图')),
@@ -43,13 +64,15 @@ class _CampusGeoPreviewPageState extends State<CampusGeoPreviewPage> {
                     style: TextStyle(fontSize: 21, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 6),
-                  const Text('底图为真实地理地图。区域、路线和位置为临时测试数据，未校准，不代表设备定位或真实清扫任务。'),
+                  const Text(
+                    '已接入校园经纬度数据，部分地点为近似值；区域边界、路线和充电点为Demo数据，尚未完成道路校准。机器人位置为演示位置。',
+                  ),
                   const SizedBox(height: 12),
                   Wrap(
                     spacing: 8,
                     runSpacing: 4,
                     children: [
-                      for (final item in TemporaryGeoData.zones)
+                      for (final item in _zones)
                         ChoiceChip(
                           label: Text(item.name),
                           selected: _selected == item.id,
@@ -57,24 +80,33 @@ class _CampusGeoPreviewPageState extends State<CampusGeoPreviewPage> {
                         ),
                     ],
                   ),
+                  if (zone != null && path.isEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: Text('${zone.name}暂未提供演示路线，仅显示地点。'),
+                    ),
+                  if (zone != null && zone.polygon.isEmpty)
+                    const Text('该地点暂未提供区域边界，使用中心点标记。'),
                   const SizedBox(height: 12),
                   CampusGeoMapView(
-                    zones: TemporaryGeoData.zones,
+                    zones: _zones,
                     selectedZoneId: _selected,
                     robotPosition: path.isEmpty
-                        ? TemporaryGeoData.chargingStation.position
+                        ? _station.position
                         : path[step],
                     plannedPath: path,
                     cleanedPath: path.isEmpty
                         ? const []
                         : path.take(step + 1).toList(),
-                    chargingStation: TemporaryGeoData.chargingStation,
+                    chargingStation: _station,
                     obstacles: _obstacle
                         ? [
-                            const CampusGeoMarkerView(
+                            CampusGeoMarkerView(
                               id: 'sample',
-                              label: '临时障碍',
-                              position: LatLng(30.8840, 121.8910),
+                              label: '演示障碍',
+                              position: path.isEmpty
+                                  ? _station.position
+                                  : path[path.length ~/ 2],
                             ),
                           ]
                         : const [],
