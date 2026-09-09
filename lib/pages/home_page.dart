@@ -104,16 +104,37 @@ class _HomePageState extends State<HomePage> {
             actions: [
               Padding(
                 padding: const EdgeInsets.only(right: 12),
-                child: Chip(
-                  avatar: Icon(
-                    status.online ? Icons.cloud_done : Icons.cloud_off,
-                    size: 18,
-                    color: status.online
-                        ? Colors.green.shade700
-                        : Colors.red.shade700,
+                child: Center(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      border: Border.all(
+                        color: Theme.of(context).colorScheme.outlineVariant,
+                      ),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          status.online ? Icons.cloud_done : Icons.cloud_off,
+                          size: 18,
+                          color: status.online
+                              ? Colors.green.shade700
+                              : Colors.red.shade700,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          status.online ? '在线' : '离线',
+                          softWrap: false,
+                          style: Theme.of(context).textTheme.labelLarge,
+                        ),
+                      ],
+                    ),
                   ),
-                  label: Text(status.online ? '在线' : '离线'),
-                  visualDensity: VisualDensity.compact,
                 ),
               ),
             ],
