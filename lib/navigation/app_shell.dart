@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../adapters/location/demo_location_adapter.dart';
 import '../controllers/robot_controller.dart';
 import '../pages/alerts_page.dart';
 import '../pages/home_page.dart';
@@ -10,7 +9,6 @@ import '../pages/tasks_page.dart';
 import '../models/cleaning_task.dart';
 import '../models/map_state.dart';
 import '../services/product_session.dart';
-import '../services/campus_demo_coordinator.dart';
 import '../services/warning/warning_record.dart';
 import '../widgets/alerts/alert_view_data.dart';
 import '../widgets/map/map_view_data.dart';
@@ -30,8 +28,6 @@ class AppShell extends StatefulWidget {
 class _AppShellState extends State<AppShell> {
   int _index = 0;
   late final ProductSession _session;
-  late final DemoLocationAdapter _campusLocationAdapter;
-  late final CampusDemoCoordinator _campusCoordinator;
   late final bool _ownsSession;
 
   @override
@@ -40,17 +36,10 @@ class _AppShellState extends State<AppShell> {
     _ownsSession = widget.session == null;
     _session =
         widget.session ?? ProductSession(robotController: widget.controller);
-    _campusLocationAdapter = DemoLocationAdapter();
-    _campusCoordinator = CampusDemoCoordinator(
-      session: _session,
-      locationAdapter: _campusLocationAdapter,
-    );
   }
 
   @override
   void dispose() {
-    _campusCoordinator.dispose();
-    _campusLocationAdapter.dispose();
     if (_ownsSession) {
       _session.dispose();
     }
@@ -153,7 +142,6 @@ class _AppShellState extends State<AppShell> {
     final map = _session.simulationEngine.currentMapState;
     final pathBlocked = _session.robotController.currentStatus.pathBlocked;
     return MapPage(
-      campusCoordinator: _campusCoordinator,
       zones: map.zones
           .map(
             (zone) => MapZoneView(

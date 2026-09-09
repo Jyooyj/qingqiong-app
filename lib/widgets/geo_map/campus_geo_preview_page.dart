@@ -49,7 +49,7 @@ class _CampusGeoPreviewPageState extends State<CampusGeoPreviewPage> {
               const <LatLng>[]);
     final step = path.isEmpty ? 0 : _step.clamp(0, path.length - 1);
     return Scaffold(
-      appBar: AppBar(title: const Text('真实地理地图')),
+      appBar: AppBar(title: const Text('校园地图')),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(16),

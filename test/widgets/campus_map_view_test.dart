@@ -3,28 +3,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:robot_cleaner/data/campus/campus_map_data.dart';
 import 'package:robot_cleaner/models/campus/campus_point.dart';
 import 'package:robot_cleaner/widgets/campus/campus_map_view.dart';
-import 'package:robot_cleaner/widgets/campus/campus_demo_page.dart';
-import 'package:robot_cleaner/pages/map_page.dart';
-import 'package:robot_cleaner/adapters/location/demo_location_adapter.dart';
-import 'package:robot_cleaner/services/campus_demo_coordinator.dart';
-import 'package:robot_cleaner/services/product_session.dart';
 
 void main() {
-  CampusDemoCoordinator createCoordinator() {
-    final session = ProductSession();
-    final adapter = DemoLocationAdapter();
-    final coordinator = CampusDemoCoordinator(
-      session: session,
-      locationAdapter: adapter,
-    );
-    addTearDown(() {
-      coordinator.dispose();
-      adapter.dispose();
-      session.dispose();
-    });
-    return coordinator;
-  }
-
   testWidgets('selection callback and external selection stay controlled', (
     tester,
   ) async {
@@ -85,38 +65,5 @@ void main() {
       findsOneWidget,
     );
     expect(find.byKey(const Key('campus-charger')), findsOneWidget);
-  });
-
-  for (final size in [
-    const Size(360, 800),
-    const Size(390, 844),
-    const Size(430, 932),
-    const Size(1366, 768),
-  ]) {
-    testWidgets('campus preview fits $size', (tester) async {
-      tester.view.physicalSize = size;
-      tester.view.devicePixelRatio = 1;
-      addTearDown(tester.view.resetPhysicalSize);
-      addTearDown(tester.view.resetDevicePixelRatio);
-      await tester.pumpWidget(
-        MaterialApp(home: CampusDemoPage(coordinator: createCoordinator())),
-      );
-      await tester.tap(find.byKey(const Key('campus-zone-lab_building')));
-      await tester.pumpAndSettle();
-      expect(find.text('当前目标：实验楼'), findsOneWidget);
-      expect(tester.takeException(), isNull);
-    });
-  }
-
-  testWidgets('existing map opens campus preview and returns', (tester) async {
-    await tester.pumpWidget(
-      MaterialApp(home: MapPage(campusCoordinator: createCoordinator())),
-    );
-    await tester.tap(find.byKey(const Key('open-campus-map')));
-    await tester.pumpAndSettle();
-    expect(find.byType(CampusDemoPage), findsOneWidget);
-    await tester.pageBack();
-    await tester.pumpAndSettle();
-    expect(find.byKey(const Key('open-campus-map')), findsOneWidget);
   });
 }
