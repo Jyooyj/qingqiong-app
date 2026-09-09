@@ -80,13 +80,13 @@
 |---|---|---|
 | `lab_building` | 实验楼 | P0 已录入 |
 | `canteen_1` | 第一食堂 | P0 已录入 |
-| `canteen_2` | 第二食堂 | P1 待后续补充 |
+| `canteen_2` | 第二食堂 | P1 已录入中心点|
 | `teaching_1` | 第一教学楼 | P1 已录入中心点 |
 | `teaching_2` | 第二教学楼 | P0 已录入 |
-| `teaching_3` | 第三教学楼 | P1 待后续补充 |
+| `teaching_3` | 第三教学楼 | P1 已录入中心点|
 | `dormitory` | 学生宿舍 | P0 已录入 |
 | `library` | 图书馆 | P0 已录入 |
-| `main_road` | 校园主干道 | P1 待后续补充 |
+| `main_road` | 校园主干道 | P1 已录入中心点|
 
 ---
 
@@ -252,12 +252,70 @@ Data note:
 - OSM way reference: `457387218`
 - Polygon has not yet been added because P0 locations were prioritized.
 
-The following P1 locations are reserved by the unified zoneId convention but are not yet included in `CampusGeoMapData.zones`:
+---
 
-- `canteen_2`
-- `teaching_3`
-- `main_road`
+### canteen_2 / 第二食堂
 
+Center:
+
+- latitude: `30.884760`
+- longitude: `121.894120`
+
+Aliases:
+
+- 第二食堂
+- 二餐
+- 第二餐厅
+
+Data note:
+
+- Current center is a Demo approximate campus coordinate.
+- This point has not been independently verified against the final map.
+- Polygon has not yet been added.
+- Final same-map calibration is still required.
+
+---
+
+### teaching_3 / 第三教学楼
+
+Center:
+
+- latitude: `30.885860`
+- longitude: `121.894180`
+
+Aliases:
+
+- 第三教学楼
+- 三教
+
+Data note:
+
+- Current center is a Demo approximate campus coordinate.
+- This point has not been independently verified against the final map.
+- Polygon has not yet been added.
+- Final same-map calibration is still required.
+
+---
+
+### main_road / 校园主干道
+
+Center:
+
+- latitude: `30.884500`
+- longitude: `121.892900`
+
+Aliases:
+
+- 校园主干道
+- 主干道
+- 校园道路
+
+Data note:
+
+- Current center is a Demo approximate representative point for the campus main road.
+- This is not a surveyed road centerline coordinate.
+- Polygon / road geometry has not yet been added.
+- Final same-map calibration is still required.
 ---
 
 ## 7. Charging Station

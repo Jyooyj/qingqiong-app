@@ -23,7 +23,23 @@ void main() {
       expect(zone, isNotNull);
       expect(zone!.id, 'teaching_2');
     });
+test('P1 zones can be found by id', () {
+  const p1ZoneIds = [
+    'canteen_2',
+    'teaching_3',
+    'main_road',
+  ];
 
+  for (final id in p1ZoneIds) {
+    final zone = CampusGeoMapData.findZoneById(id);
+
+    expect(
+      zone,
+      isNotNull,
+      reason: '$id should exist',
+    );
+  }
+});
     test('all P0 zones have non-empty polygons', () {
       const p0ZoneIds = [
         'lab_building',
