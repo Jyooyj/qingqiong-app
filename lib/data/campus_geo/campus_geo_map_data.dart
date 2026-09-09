@@ -68,7 +68,26 @@ class CampusGeoMapData {
         ),
       ],
     ),
-
+        CampusGeoZone(
+          id: 'canteen_2',
+          name: '第二食堂',
+          aliases: ['第二食堂', '二餐', '第二餐厅'],
+          center: CampusGeoPoint(
+          latitude: 30.884760,
+          longitude: 121.894120,
+    ),
+    polygon: [],
+),
+        CampusGeoZone(
+          id: 'teaching_3',
+          name: '第三教学楼',
+          aliases: ['第三教学楼', '三教'],
+          center: CampusGeoPoint(
+          latitude: 30.885860,
+           longitude: 121.894180,
+  ),
+    polygon: [],
+),
     CampusGeoZone(
       id: 'teaching_2',
       name: '第二教学楼',
@@ -131,7 +150,16 @@ class CampusGeoMapData {
         ),
       ],
     ),
-
+        CampusGeoZone(
+          id: 'main_road',
+          name: '校园主干道',
+          aliases: ['校园主干道', '主干道', '校园道路'],
+          center: CampusGeoPoint(
+          latitude: 30.884500,
+          longitude: 121.892900,
+  ),
+  polygon: [],
+), 
     CampusGeoZone(
       id: 'library',
       name: '图书馆',
