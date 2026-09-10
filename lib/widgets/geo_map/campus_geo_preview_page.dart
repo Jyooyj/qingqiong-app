@@ -1,3 +1,5 @@
+import '../../services/campus_demo_coordinator.dart';
+import '../../services/product_session.dart';
 import "package:latlong2/latlong.dart";
 
 import 'package:flutter/foundation.dart';
@@ -6,9 +8,10 @@ import 'campus_geo_map_view.dart';
 import '../../data/campus_geo/campus_geo_map_data.dart';
 import '../../models/campus_geo/campus_geo_point.dart';
 
-/// Local, manual UI preview. No timer or business coordinator.
+/// Geographic display bound to the shared campus task coordinator.
 class CampusGeoPreviewPage extends StatefulWidget {
-  const CampusGeoPreviewPage({super.key});
+  const CampusGeoPreviewPage({super.key, this.coordinator});
+  final CampusDemoCoordinator? coordinator;
   @override
   State<CampusGeoPreviewPage> createState() => _CampusGeoPreviewPageState();
 }
@@ -31,23 +34,35 @@ class _CampusGeoPreviewPageState extends State<CampusGeoPreviewPage> {
     label: 'Demo充电点',
     position: _point(CampusGeoMapData.chargingStation.position),
   );
-  String? _selected;
-  int _step = 0;
+  ProductSession? _ownedSession;
+  late final CampusDemoCoordinator _coordinator;
+  String? get _selected => _coordinator.selectedZoneId;
   bool _obstacle = false, _picker = false;
-  void _select(String id) => setState(() {
-    _selected = id;
-    _step = 0;
-  });
+  void _select(String id) => _coordinator.selectZone(id);
+  @override
+  void initState() {
+    super.initState();
+    _coordinator =
+        widget.coordinator ??
+        (_ownedSession = ProductSession()).campusCoordinator;
+    _coordinator.addListener(_refresh);
+  }
+
+  void _refresh() {
+    if (mounted) setState(() {});
+  }
+
+  @override
+  void dispose() {
+    _coordinator.removeListener(_refresh);
+    _ownedSession?.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     final zone = _zones.where((z) => z.id == _selected).firstOrNull;
-    final path = zone == null
-        ? const <LatLng>[]
-        : (CampusGeoMapData.routeForZone(
-                zone.id,
-              )?.plannedPath.map(_point).toList() ??
-              const <LatLng>[]);
-    final step = path.isEmpty ? 0 : _step.clamp(0, path.length - 1);
+    final path = _coordinator.geoPlannedPath;
     return Scaffold(
       appBar: AppBar(title: const Text('校园地图')),
       body: SafeArea(
@@ -91,13 +106,9 @@ class _CampusGeoPreviewPageState extends State<CampusGeoPreviewPage> {
                   CampusGeoMapView(
                     zones: _zones,
                     selectedZoneId: _selected,
-                    robotPosition: path.isEmpty
-                        ? _station.position
-                        : path[step],
+                    robotPosition: _coordinator.geoRobotPosition,
                     plannedPath: path,
-                    cleanedPath: path.isEmpty
-                        ? const []
-                        : path.take(step + 1).toList(),
+                    cleanedPath: _coordinator.geoCleanedPath,
                     chargingStation: _station,
                     obstacles: _obstacle
                         ? [
@@ -120,16 +131,11 @@ class _CampusGeoPreviewPageState extends State<CampusGeoPreviewPage> {
                     runSpacing: 8,
                     children: [
                       OutlinedButton.icon(
-                        onPressed: path.isEmpty || step >= path.length - 1
-                            ? null
-                            : () => setState(() => _step++),
+                        onPressed: null,
                         icon: const Icon(Icons.skip_next),
                         label: const Text('演示位置前进一步'),
                       ),
-                      TextButton(
-                        onPressed: () => setState(() => _step = 0),
-                        child: const Text('重置演示位置'),
-                      ),
+                      TextButton(onPressed: null, child: const Text('重置演示位置')),
                     ],
                   ),
                   SwitchListTile(

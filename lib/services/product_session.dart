@@ -1,3 +1,6 @@
+import '../data/campus_geo/campus_geo_map_data.dart';
+import '../data/campus/campus_map_data.dart';
+import 'campus_demo_coordinator.dart';
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
@@ -51,6 +54,7 @@ class ProductSession extends ChangeNotifier {
     voiceControlService = VoiceControlService(
       controller: this.robotController,
       dispatcher: _dispatchVoiceCommand,
+      campusDispatcher: _dispatchCampusVoice,
     );
 
     this.robotController.addListener(_onRobotChanged);
@@ -60,6 +64,18 @@ class ProductSession extends ChangeNotifier {
     );
     _synchronizeWarningAndSafety();
   }
+
+  CampusDemoCoordinator? _campusCoordinator;
+  String? _externallyDrivenTaskId;
+
+  /// Route-driven tasks advance through their location coordinator.
+  void useExternalTaskProgress(String taskId) {
+    _externallyDrivenTaskId = taskId;
+    simulationEngine.stop();
+  }
+
+  CampusDemoCoordinator get campusCoordinator =>
+      _campusCoordinator ??= CampusDemoCoordinator(session: this);
 
   final RobotController robotController;
   late final TaskController taskController;
@@ -258,13 +274,35 @@ class ProductSession extends ChangeNotifier {
 
   ControlResult _resumeTask(String taskId) {
     final success = taskController.resumeTask(taskId);
-    if (success && !simulationEngine.isRunning) {
+    if (success &&
+        !simulationEngine.isRunning &&
+        _externallyDrivenTaskId != taskId) {
       simulationEngine.start(taskId);
     }
     return _taskControlResult(
       fallbackAction: RobotAction.resume,
       success: success,
       successMessage: '任务已继续',
+    );
+  }
+
+  VoiceExecutionResult? _dispatchCampusVoice(String text) {
+    final mentionsCampus = [
+      ...CampusMapData.zones.expand((z) => z.aliases),
+      ...CampusGeoMapData.zones.expand((z) => z.aliases),
+    ].any(text.contains);
+    if (!mentionsCampus) return null;
+    final result = campusCoordinator.handleVoiceText(text);
+    return VoiceExecutionResult(
+      inputText: text,
+      parseResult: VoiceCommandResult(
+        recognized: true,
+        command: result.action.name,
+        area: campusCoordinator.selectedZoneId,
+        originalText: text,
+        message: result.message,
+      ),
+      controlResult: result,
     );
   }
 
@@ -339,6 +377,7 @@ class ProductSession extends ChangeNotifier {
       return;
     }
     _disposed = true;
+    _campusCoordinator?.dispose();
     robotController.removeListener(_onRobotChanged);
     taskController.removeListener(_onTaskChanged);
     _mapSubscription.cancel();

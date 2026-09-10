@@ -1,8 +1,37 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:robot_cleaner/adapters/geo_location/demo_geo_location_adapter.dart';
 import 'package:robot_cleaner/models/campus_geo/campus_geo_point.dart';
+import 'package:robot_cleaner/data/campus_geo/campus_geo_map_data.dart';
 
 void main() {
+  testWidgets(
+    'default campus route takes 40 seconds and pause preserves position',
+    (tester) async {
+      final adapter = DemoGeoLocationAdapter();
+      final path = CampusGeoMapData.routeForZone('lab_building')!.plannedPath;
+      try {
+        adapter.loadPath(path);
+        adapter.start();
+        await tester.pump(const Duration(seconds: 9));
+        expect(adapter.currentPosition, path.first);
+        await tester.pump(const Duration(seconds: 1));
+        expect(adapter.currentPosition, path[1]);
+        adapter.pause();
+        await tester.pump(const Duration(seconds: 20));
+        expect(adapter.currentPosition, path[1]);
+        adapter.resume();
+        await tester.pump(const Duration(seconds: 29));
+        expect(adapter.currentPosition, path[3]);
+        await tester.pump(const Duration(seconds: 1));
+        expect(adapter.currentPosition, path.last);
+        await tester.pump(const Duration(seconds: 20));
+        expect(adapter.currentPosition, path.last);
+      } finally {
+        adapter.dispose();
+      }
+    },
+  );
+
   group('DemoGeoLocationAdapter', () {
     late DemoGeoLocationAdapter adapter;
 

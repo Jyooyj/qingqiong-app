@@ -15,7 +15,9 @@ class DemoGeoLocationAdapter implements GeoLocationAdapter {
   bool _isRunning = false;
 
   DemoGeoLocationAdapter({
-    this.stepInterval = const Duration(seconds: 1),
+    // Five route points mean four moves: about 40 seconds for a demo.
+    // Tests and other callers can still inject a shorter interval.
+    this.stepInterval = const Duration(seconds: 10),
   });
 
   @override

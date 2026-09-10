@@ -142,6 +142,7 @@ class _AppShellState extends State<AppShell> {
     final map = _session.simulationEngine.currentMapState;
     final pathBlocked = _session.robotController.currentStatus.pathBlocked;
     return MapPage(
+      campusCoordinator: _session.campusCoordinator,
       zones: map.zones
           .map(
             (zone) => MapZoneView(

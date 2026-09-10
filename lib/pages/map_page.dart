@@ -1,3 +1,4 @@
+import '../services/campus_demo_coordinator.dart';
 import '../widgets/geo_map/campus_geo_preview_page.dart';
 import 'package:flutter/material.dart';
 import '../widgets/map/map_view_data.dart';
@@ -6,6 +7,7 @@ import '../widgets/map/cleaning_map_view.dart';
 class MapPage extends StatelessWidget {
   const MapPage({
     super.key,
+    this.campusCoordinator,
     this.zones = const <MapZoneView>[],
     this.robotPosition,
     this.plannedPath = const <MapPointView>[],
@@ -15,6 +17,7 @@ class MapPage extends StatelessWidget {
     this.highlightedWarningCode,
   });
 
+  final CampusDemoCoordinator? campusCoordinator;
   final List<MapZoneView> zones;
   final MapPointView? robotPosition;
   final List<MapPointView> plannedPath;
@@ -109,7 +112,8 @@ class MapPage extends StatelessWidget {
                   key: const Key('open-geo-map'),
                   onPressed: () => Navigator.of(context).push(
                     MaterialPageRoute<void>(
-                      builder: (_) => const CampusGeoPreviewPage(),
+                      builder: (_) =>
+                          CampusGeoPreviewPage(coordinator: campusCoordinator),
                     ),
                   ),
                   icon: const Icon(Icons.public),
