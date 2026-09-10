@@ -1,3 +1,6 @@
 *.fileLoc
 .dart_tool/
 build/
+
+# Generated Flutter plugin metadata
+.flutter-plugins-dependencies

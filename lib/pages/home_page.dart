@@ -1,18 +1,30 @@
 import 'package:flutter/material.dart';
 
 import '../controllers/robot_controller.dart';
+import '../models/cleaning_task.dart';
+import '../services/product_session.dart';
 import '../services/voice_control_service.dart';
-import '../services/warning_service.dart';
 import '../widgets/control_panel.dart';
 import '../widgets/demo_fault_panel.dart';
 import '../widgets/robot_status_card.dart';
+import '../widgets/dashboard/current_task_card.dart';
+import '../widgets/dashboard/dashboard_stats_card.dart';
+import '../widgets/dashboard/recent_alert_card.dart';
 import '../widgets/voice_control_sheet.dart';
-import '../widgets/warning_card.dart';
 
 class HomePage extends StatefulWidget {
-  const HomePage({super.key, this.controller});
+  const HomePage({
+    super.key,
+    this.controller,
+    this.session,
+    this.onNavigateToTasks,
+    this.onNavigateToAlerts,
+  });
 
   final RobotController? controller;
+  final ProductSession? session;
+  final VoidCallback? onNavigateToTasks;
+  final VoidCallback? onNavigateToAlerts;
 
   @override
   State<HomePage> createState() => _HomePageState();
@@ -26,9 +38,14 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
-    _ownsController = widget.controller == null;
-    _controller = widget.controller ?? RobotController();
-    _voiceService = VoiceControlService(controller: _controller);
+    _ownsController = widget.session == null && widget.controller == null;
+    _controller =
+        widget.session?.robotController ??
+        widget.controller ??
+        RobotController();
+    _voiceService =
+        widget.session?.voiceControlService ??
+        VoiceControlService(controller: _controller);
   }
 
   @override
@@ -74,6 +91,8 @@ class _HomePageState extends State<HomePage> {
       builder: (context, _) {
         final status = _controller.currentStatus;
         final warning = _controller.warningResult;
+        final task = widget.session?.currentTask;
+        final stats = widget.session?.dashboardStats;
 
         return Scaffold(
           appBar: AppBar(
@@ -85,16 +104,37 @@ class _HomePageState extends State<HomePage> {
             actions: [
               Padding(
                 padding: const EdgeInsets.only(right: 12),
-                child: Chip(
-                  avatar: Icon(
-                    status.online ? Icons.cloud_done : Icons.cloud_off,
-                    size: 18,
-                    color: status.online
-                        ? Colors.green.shade700
-                        : Colors.red.shade700,
+                child: Center(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      border: Border.all(
+                        color: Theme.of(context).colorScheme.outlineVariant,
+                      ),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          status.online ? Icons.cloud_done : Icons.cloud_off,
+                          size: 18,
+                          color: status.online
+                              ? Colors.green.shade700
+                              : Colors.red.shade700,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          status.online ? '在线' : '离线',
+                          softWrap: false,
+                          style: Theme.of(context).textTheme.labelLarge,
+                        ),
+                      ],
+                    ),
                   ),
-                  label: Text(status.online ? '在线' : '离线'),
-                  visualDensity: VisualDensity.compact,
                 ),
               ),
             ],
@@ -114,11 +154,57 @@ class _HomePageState extends State<HomePage> {
                             children: [
                               Expanded(
                                 flex: 6,
-                                child: _OverviewColumn(
-                                  controller: _controller,
-                                  warning: warning,
-                                  onAreaSelected: (area) =>
-                                      _run(() => _controller.selectArea(area)),
+                                child: Column(
+                                  children: [
+                                    // Device overview (reuse RobotStatusCard)
+                                    RobotStatusCard(
+                                      status: _controller.currentStatus,
+                                    ),
+                                    const SizedBox(height: 12),
+                                    // Area selector (desktop only) placed after status and before current task
+                                    _AreaSelector(
+                                      selectedArea: status.area,
+                                      enabled: _controller.canSelectArea,
+                                      onSelected: (area) => _run(
+                                        () => _controller.selectArea(area),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 12),
+                                    // Current task card
+                                    CurrentTaskCard(
+                                      key: const Key('dashboard-current-task'),
+                                      title: task?.name ?? '暂无任务',
+                                      area: task?.area ?? status.area,
+                                      statusText: _taskStatus(task),
+                                      progress:
+                                          task?.progress.round() ??
+                                          status.progress,
+                                      eta: _taskEta(task),
+                                      onTap: widget.onNavigateToTasks,
+                                    ),
+                                    const SizedBox(height: 12),
+                                    // Quick stats
+                                    DashboardStatsCard(
+                                      key: const Key('dashboard-stats'),
+                                      tasksToday: stats?.todayTaskCount ?? 0,
+                                      completed:
+                                          stats?.todayCompletedCount ?? 0,
+                                      area:
+                                          '${(stats?.totalCleanedArea ?? 0).toStringAsFixed(1)} m²',
+                                      duration: _duration(
+                                        stats?.totalCleaningDuration ??
+                                            Duration.zero,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 12),
+                                    // Recent alert
+                                    RecentAlertCard(
+                                      key: const Key('dashboard-recent-alert'),
+                                      warning: warning,
+                                      occurredAtText: '刚刚',
+                                      onTap: widget.onNavigateToAlerts,
+                                    ),
+                                  ],
                                 ),
                               ),
                               const SizedBox(width: 16),
@@ -136,11 +222,31 @@ class _HomePageState extends State<HomePage> {
                           )
                         : Column(
                             children: [
+                              // Device overview
                               RobotStatusCard(status: status),
-                              if (warning.hasWarning) ...[
-                                const SizedBox(height: 10),
-                                WarningCard(warning: warning),
-                              ],
+                              const SizedBox(height: 10),
+                              // Place control panel early so core buttons stay visible
+                              _buildControlPanel(),
+                              const SizedBox(height: 10),
+                              // Current task card
+                              CurrentTaskCard(
+                                key: const Key('dashboard-current-task'),
+                                title: task?.name ?? '暂无任务',
+                                area: task?.area ?? status.area,
+                                statusText: _taskStatus(task),
+                                progress:
+                                    task?.progress.round() ?? status.progress,
+                                eta: _taskEta(task),
+                                onTap: widget.onNavigateToTasks,
+                              ),
+                              const SizedBox(height: 10),
+                              // Recent alert or warning card
+                              RecentAlertCard(
+                                key: const Key('dashboard-recent-alert'),
+                                warning: warning,
+                                occurredAtText: '刚刚',
+                                onTap: widget.onNavigateToAlerts,
+                              ),
                               const SizedBox(height: 10),
                               _AreaSelector(
                                 selectedArea: status.area,
@@ -149,7 +255,16 @@ class _HomePageState extends State<HomePage> {
                                     _run(() => _controller.selectArea(area)),
                               ),
                               const SizedBox(height: 10),
-                              _buildControlPanel(),
+                              DashboardStatsCard(
+                                key: const Key('dashboard-stats'),
+                                tasksToday: stats?.todayTaskCount ?? 0,
+                                completed: stats?.todayCompletedCount ?? 0,
+                                area:
+                                    '${(stats?.totalCleanedArea ?? 0).toStringAsFixed(1)} m²',
+                                duration: _duration(
+                                  stats?.totalCleaningDuration ?? Duration.zero,
+                                ),
+                              ),
                               const SizedBox(height: 10),
                               DemoFaultPanel(controller: _controller),
                             ],
@@ -165,51 +280,76 @@ class _HomePageState extends State<HomePage> {
   }
 
   ControlPanel _buildControlPanel() {
+    final session = widget.session;
     return ControlPanel(
-      onStart: _controller.canStart ? () => _run(_controller.start) : null,
-      onPause: _controller.canPause ? () => _run(_controller.pause) : null,
-      onResume: _controller.canResume ? () => _run(_controller.resume) : null,
-      onStop: _controller.canStop ? () => _run(_controller.stop) : null,
+      onStart: (session?.canStartTask ?? _controller.canStart)
+          ? () => _run(
+              session == null ? _controller.start : session.startOrCreateTask,
+            )
+          : null,
+      onPause: (session?.canPauseTask ?? _controller.canPause)
+          ? () => _run(
+              session == null ? _controller.pause : session.pauseCurrentTask,
+            )
+          : null,
+      onResume: (session?.canResumeTask ?? _controller.canResume)
+          ? () => _run(
+              session == null ? _controller.resume : session.resumeCurrentTask,
+            )
+          : null,
+      onStop: (session?.canStopTask ?? _controller.canStop)
+          ? () => _run(
+              session == null ? _controller.stop : session.stopCurrentTask,
+            )
+          : null,
       onCharge: _controller.canCharge ? () => _run(_controller.charge) : null,
       onEmergency: _controller.canEmergencyStop
-          ? () => _run(_controller.emergencyStop)
+          ? () => _run(
+              session == null
+                  ? _controller.emergencyStop
+                  : session.emergencyStop,
+            )
           : null,
-      onReset: _controller.canReset ? () => _run(_controller.reset) : null,
+      onReset: _controller.canReset
+          ? () => _run(
+              session == null ? _controller.reset : session.resetEmergency,
+            )
+          : null,
       onVoice: _showVoiceControl,
     );
   }
-}
 
-class _OverviewColumn extends StatelessWidget {
-  const _OverviewColumn({
-    required this.controller,
-    required this.warning,
-    required this.onAreaSelected,
-  });
+  String _taskStatus(CleaningTask? task) {
+    if (task == null) {
+      return '待创建';
+    }
+    return switch (task.status) {
+      CleaningTaskStatus.pending => '待执行',
+      CleaningTaskStatus.running => '清扫中',
+      CleaningTaskStatus.paused => '已暂停',
+      CleaningTaskStatus.completed => '已完成',
+      CleaningTaskStatus.failed => '失败',
+      CleaningTaskStatus.cancelled => '已停止',
+    };
+  }
 
-  final RobotController controller;
-  final WarningResult warning;
-  final ValueChanged<String> onAreaSelected;
+  String _taskEta(CleaningTask? task) {
+    if (task == null || task.status == CleaningTaskStatus.completed) {
+      return '--';
+    }
+    final seconds = ((100 - task.progress) / 5).ceil().clamp(0, 999);
+    return '约 $seconds 秒';
+  }
 
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        RobotStatusCard(status: controller.currentStatus),
-        if (warning.hasWarning) ...[
-          const SizedBox(height: 12),
-          WarningCard(warning: warning),
-        ],
-        const SizedBox(height: 12),
-        _AreaSelector(
-          selectedArea: controller.currentStatus.area,
-          enabled: controller.canSelectArea,
-          onSelected: onAreaSelected,
-        ),
-      ],
-    );
+  String _duration(Duration value) {
+    final hours = value.inHours.toString().padLeft(2, '0');
+    final minutes = (value.inMinutes % 60).toString().padLeft(2, '0');
+    final seconds = (value.inSeconds % 60).toString().padLeft(2, '0');
+    return '$hours:$minutes:$seconds';
   }
 }
+
+// _OverviewColumn removed; dashboard widgets are integrated directly in HomePage.
 
 class _AreaSelector extends StatelessWidget {
   const _AreaSelector({
