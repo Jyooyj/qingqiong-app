@@ -40,7 +40,7 @@ void main() {
   testWidgets('displays demo mode card and description', (tester) async {
     await pumpProfilePage(tester);
 
-    expect(find.text('Demo Mode'), findsOneWidget);
+    expect(find.text('演示模式'), findsOneWidget);
     expect(find.text('当前状态：已开启'), findsOneWidget);
     expect(find.text('使用演示数据展示任务、轨迹与告警'), findsOneWidget);
     expect(find.byKey(const Key('profile-demo-mode')), findsOneWidget);
@@ -79,8 +79,8 @@ void main() {
     bool didTap = false;
     await pumpProfilePage(tester, onVoiceSettingsTap: () => didTap = true);
 
-    expect(find.textContaining('文本指令：可用'), findsOneWidget);
-    expect(find.textContaining('麦克风语音：待接入'), findsOneWidget);
+    expect(find.textContaining('自然语言指令'), findsOneWidget);
+    expect(find.textContaining('文字输入'), findsOneWidget);
 
     final voiceTile = find.byKey(const Key('profile-voice-settings'));
     await tester.ensureVisible(voiceTile);

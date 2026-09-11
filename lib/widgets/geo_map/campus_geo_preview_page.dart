@@ -5,13 +5,19 @@ import "package:latlong2/latlong.dart";
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'campus_geo_map_view.dart';
+import '../tasks/task_view_data.dart';
 import '../../data/campus_geo/campus_geo_map_data.dart';
 import '../../models/campus_geo/campus_geo_point.dart';
 
 /// Geographic display bound to the shared campus task coordinator.
 class CampusGeoPreviewPage extends StatefulWidget {
-  const CampusGeoPreviewPage({super.key, this.coordinator});
+  const CampusGeoPreviewPage({
+    super.key,
+    this.coordinator,
+    this.pathBlocked = false,
+  });
   final CampusDemoCoordinator? coordinator;
+  final bool pathBlocked;
   @override
   State<CampusGeoPreviewPage> createState() => _CampusGeoPreviewPageState();
 }
@@ -31,7 +37,7 @@ class _CampusGeoPreviewPageState extends State<CampusGeoPreviewPage> {
       .toList();
   static final _station = CampusGeoMarkerView(
     id: CampusGeoMapData.chargingStation.id,
-    label: 'Demo充电点',
+    label: '充电点',
     position: _point(CampusGeoMapData.chargingStation.position),
   );
   ProductSession? _ownedSession;
@@ -75,13 +81,11 @@ class _CampusGeoPreviewPageState extends State<CampusGeoPreviewPage> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   const Text(
-                    '上海海洋大学 · 地图 UI 预览',
+                    '上海海洋大学 · 校园智能清扫地图',
                     style: TextStyle(fontSize: 21, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 6),
-                  const Text(
-                    '已接入校园经纬度数据，部分地点为近似值；区域边界、路线和充电点为Demo数据，尚未完成道路校准。机器人位置为演示位置。',
-                  ),
+                  const Text('实时展示清扫区域、规划路线、机器人位置与任务状态'),
                   const SizedBox(height: 12),
                   Wrap(
                     spacing: 8,
@@ -98,10 +102,10 @@ class _CampusGeoPreviewPageState extends State<CampusGeoPreviewPage> {
                   if (zone != null && path.isEmpty)
                     Padding(
                       padding: const EdgeInsets.only(top: 8),
-                      child: Text('${zone.name}暂未提供演示路线，仅显示地点。'),
+                      child: Text('${zone.name}暂无可用清扫路线。'),
                     ),
                   if (zone != null && zone.polygon.isEmpty)
-                    const Text('该地点暂未提供区域边界，使用中心点标记。'),
+                    const Text('该地点以位置标记显示。'),
                   const SizedBox(height: 12),
                   CampusGeoMapView(
                     zones: _zones,
@@ -110,12 +114,14 @@ class _CampusGeoPreviewPageState extends State<CampusGeoPreviewPage> {
                     plannedPath: path,
                     cleanedPath: _coordinator.geoCleanedPath,
                     chargingStation: _station,
-                    obstacles: _obstacle
+                    obstacles: _obstacle || widget.pathBlocked
                         ? [
                             CampusGeoMarkerView(
-                              id: 'sample',
-                              label: '演示障碍',
-                              position: path.isEmpty
+                              id: widget.pathBlocked ? 'WARN-007' : 'sample',
+                              label: '路径阻塞',
+                              position: widget.pathBlocked
+                                  ? _coordinator.geoRobotPosition
+                                  : path.isEmpty
                                   ? _station.position
                                   : path[path.length ~/ 2],
                             ),
@@ -123,24 +129,49 @@ class _CampusGeoPreviewPageState extends State<CampusGeoPreviewPage> {
                         : const [],
                     onZoneTap: _select,
                     enableCoordinatePicker: _picker,
-                    onFallback: () => Navigator.of(context).pop(),
                   ),
                   const SizedBox(height: 12),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      OutlinedButton.icon(
-                        onPressed: null,
-                        icon: const Icon(Icons.skip_next),
-                        label: const Text('演示位置前进一步'),
+                  Card(
+                    key: const Key('geo-task-status-card'),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Text(
+                            _coordinator.currentTask?.name ?? '暂无清扫任务',
+                            style: Theme.of(context).textTheme.titleMedium,
+                          ),
+                          const SizedBox(height: 8),
+                          Wrap(
+                            spacing: 16,
+                            runSpacing: 6,
+                            children: [
+                              Text('地点：${zone?.name ?? "未选择"}'),
+                              Text(
+                                _coordinator.currentTask == null
+                                    ? '待机'
+                                    : taskStatusLabel(
+                                        _coordinator.currentTask!.status.name,
+                                      ),
+                              ),
+                              Text(
+                                '${(_coordinator.geoProgress * 100).round()}%',
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          LinearProgressIndicator(
+                            key: const Key('geo-task-progress'),
+                            value: _coordinator.geoProgress.clamp(0.0, 1.0),
+                          ),
+                        ],
                       ),
-                      TextButton(onPressed: null, child: const Text('重置演示位置')),
-                    ],
+                    ),
                   ),
                   SwitchListTile(
                     contentPadding: EdgeInsets.zero,
-                    title: const Text('显示临时障碍'),
+                    title: const Text('模拟路径阻塞'),
                     value: _obstacle,
                     onChanged: (v) => setState(() => _obstacle = v),
                   ),

@@ -236,10 +236,7 @@ void main() {
     await tester.tap(find.byIcon(Icons.map).first);
     await tester.pumpAndSettle();
 
-    expect(
-      find.byKey(const Key('obstacle-highlight-WARN-007')),
-      findsOneWidget,
-    );
+    expect(find.byKey(const Key('geo-obstacle-WARN-007')), findsOneWidget);
     app.session.simulationEngine.stop();
   });
 

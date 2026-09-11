@@ -16,6 +16,8 @@ class TaskFilterBar extends StatelessWidget {
     {'key': 'all', 'label': '全部'},
     {'key': 'pending', 'label': '待执行'},
     {'key': 'running', 'label': '执行中'},
+    {'key': 'paused', 'label': '已暂停'},
+    {'key': 'cancelled', 'label': '已停止'},
     {'key': 'completed', 'label': '已完成'},
     {'key': 'failed', 'label': '失败'},
   ];
@@ -24,6 +26,7 @@ class TaskFilterBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return Wrap(
       spacing: 8,
+      runSpacing: 6,
       children: _filters.map((f) {
         final active = current == f['key'];
         return ChoiceChip(

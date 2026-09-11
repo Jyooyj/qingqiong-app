@@ -63,6 +63,7 @@ class _CampusGeoMapViewState extends State<CampusGeoMapView> {
   int _generation = 0;
   TileProvider? _provider;
   LatLng? _picked;
+  double? _zoomLevel;
   bool get _picker => kDebugMode && widget.enableCoordinatePicker;
   List<CampusGeoZoneView> get _zones => widget.zones
       .where(
@@ -181,6 +182,103 @@ class _CampusGeoMapViewState extends State<CampusGeoMapView> {
     super.dispose();
   }
 
+  // Screen-space collision handling never changes the supplied geographic points.
+  List<Marker> _zoneMarkers(List<CampusGeoZoneView> zones) {
+    final zoom = _zoomLevel ?? widget.initialZoom;
+    final scale = 256 * math.pow(2, zoom);
+    Offset project(LatLng p) {
+      final sinLat = math
+          .sin(p.latitude * math.pi / 180)
+          .clamp(-0.9999, 0.9999);
+      return Offset(
+        (p.longitude + 180) / 360 * scale,
+        (0.5 - math.log((1 + sinLat) / (1 - sinLat)) / (4 * math.pi)) * scale,
+      );
+    }
+
+    final occupied = <Rect>[];
+    final robot = widget.robotPosition;
+    if (robot != null && validGeoPoint(robot)) {
+      occupied.add(
+        Rect.fromCenter(center: project(robot), width: 100, height: 44),
+      );
+    }
+    final ordered = [...zones]
+      ..sort(
+        (a, b) => a.id == widget.selectedZoneId
+            ? -1
+            : b.id == widget.selectedZoneId
+            ? 1
+            : a.id.compareTo(b.id),
+      );
+    final markers = <Marker>[];
+    for (final zone in ordered) {
+      final selected = zone.id == widget.selectedZoneId;
+      final rect = Rect.fromCenter(
+        center: project(zone.center),
+        width: selected ? 172 : 116,
+        height: 48,
+      );
+      final label =
+          selected || (zoom >= 17 && !occupied.any((r) => r.overlaps(rect)));
+      if (label) occupied.add(rect);
+      markers.add(
+        Marker(
+          point: zone.center,
+          width: label ? (selected ? 168 : 112) : 32,
+          height: 44,
+          child: Tooltip(
+            message: zone.name,
+            child: Semantics(
+              label: zone.name,
+              button: true,
+              selected: selected,
+              child: GestureDetector(
+                key: Key('geo-zone-${zone.id}'),
+                behavior: HitTestBehavior.opaque,
+                onTap: () => widget.onZoneTap?.call(zone.id),
+                child: Center(
+                  child: label
+                      ? Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: selected
+                                ? const Color(0xff087d62)
+                                : const Color(0xeeffffff),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            zone.name,
+                            textAlign: TextAlign.center,
+                            maxLines: 2,
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: selected
+                                  ? FontWeight.bold
+                                  : FontWeight.normal,
+                              color: selected ? Colors.white : Colors.black87,
+                            ),
+                          ),
+                        )
+                      : const Icon(
+                          Icons.location_on,
+                          size: 18,
+                          color: Color(0xff4981a0),
+                        ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+    // Selected label is above other POIs; the robot is appended by the caller.
+    return markers.reversed.toList();
+  }
+
   @override
   Widget build(BuildContext context) {
     final zones = _zones;
@@ -232,7 +330,10 @@ class _CampusGeoMapViewState extends State<CampusGeoMapView> {
                         _scheduleFocus();
                         _refreshTileStatus();
                       },
-                      onPositionChanged: (_, _) {
+                      onPositionChanged: (camera, _) {
+                        if (_zoomLevel != camera.zoom) {
+                          setState(() => _zoomLevel = camera.zoom);
+                        }
                         _armTimeout();
                         _refreshTileStatus();
                       },
@@ -315,40 +416,7 @@ class _CampusGeoMapViewState extends State<CampusGeoMapView> {
                       ),
                       MarkerLayer(
                         markers: [
-                          for (final zone in zones)
-                            Marker(
-                              point: zone.center,
-                              width: 92,
-                              height: 32,
-                              child: Semantics(
-                                button: true,
-                                selected: zone.id == widget.selectedZoneId,
-                                child: GestureDetector(
-                                  key: Key('geo-zone-${zone.id}'),
-                                  onTap: () => widget.onZoneTap?.call(zone.id),
-                                  child: Container(
-                                    alignment: Alignment.center,
-                                    decoration: BoxDecoration(
-                                      color: zone.id == widget.selectedZoneId
-                                          ? const Color(0xff087d62)
-                                          : Colors.white,
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    child: Text(
-                                      zone.name,
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        color: zone.id == widget.selectedZoneId
-                                            ? Colors.white
-                                            : Colors.black87,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
+                          ..._zoneMarkers(zones),
                           if (charger != null &&
                               validGeoPoint(charger.position) &&
                               !coLocated)
@@ -426,7 +494,7 @@ class _CampusGeoMapViewState extends State<CampusGeoMapView> {
                                     'geo-robot',
                                     Icons.smart_toy,
                                     const Color(0xff184b6b),
-                                    '机器人（外部位置）',
+                                    '机器人',
                                   ),
                           if (_picker && _picked != null)
                             _marker(
@@ -479,9 +547,7 @@ class _CampusGeoMapViewState extends State<CampusGeoMapView> {
                       left: 10,
                       right: 66,
                       child: CampusGeoMapFallback(
-                        message: _loaded
-                            ? '部分底图加载失败，已加载区域仍可使用。'
-                            : '当前视野底图暂不可用，请检查网络或重试。位置与路线图层仍保留。',
+                        message: '底图加载失败，请检查网络后重试',
                         onRetry: _retry,
                         onFallback: widget.onFallback,
                       ),
@@ -505,7 +571,7 @@ class _CampusGeoMapViewState extends State<CampusGeoMapView> {
             Text('┄ 规划路线', style: TextStyle(color: Colors.blue)),
             Text('━ 已清扫轨迹', style: TextStyle(color: Color(0xff07835e))),
             Text('▲ 障碍', style: TextStyle(color: Colors.deepOrange)),
-            Text('机器人位置由外部数据提供', style: TextStyle(fontSize: 12)),
+            Text('● 机器人', style: TextStyle(fontSize: 12)),
           ],
         ),
         if (_picker)

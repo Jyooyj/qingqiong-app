@@ -49,57 +49,12 @@ class _TasksPageState extends State<TasksPage> {
     _selected = null;
   }
 
-  List<TaskViewData> get _source => widget.tasks ?? _sampleData();
+  List<TaskViewData> get _source => widget.tasks ?? const <TaskViewData>[];
 
   List<TaskViewData> get _filtered {
     if (_filter == 'all') return _source;
     return _source.where((t) => t.status == _filter).toList();
   }
-
-  List<TaskViewData> _sampleData() => [
-    TaskViewData(
-      id: '1',
-      name: '入口走廊清扫',
-      area: 'A区',
-      status: 'pending',
-      progress: 0,
-      timeText: '计划: 今天 09:00',
-      mode: '标准',
-    ),
-    TaskViewData(
-      id: '2',
-      name: '会议室深度清洁',
-      area: 'B区',
-      status: 'running',
-      progress: 48,
-      timeText: '开始: 08:23',
-      mode: '深度',
-      cleanedArea: 12.4,
-      durationText: '00:21:12',
-      startTimeText: '08:23',
-    ),
-    TaskViewData(
-      id: '3',
-      name: '储物间快速清扫',
-      area: 'C区',
-      status: 'completed',
-      progress: 100,
-      timeText: '开始: 07:00',
-      mode: '快速',
-      cleanedArea: 5.2,
-      durationText: '00:12:34',
-      startTimeText: '07:00',
-    ),
-    TaskViewData(
-      id: '4',
-      name: '库房问题处理',
-      area: 'A区',
-      status: 'failed',
-      progress: 20,
-      timeText: '计划: 今天 10:00',
-      mode: '标准',
-    ),
-  ];
 
   void _onFilterChanged(String f) => setState(() {
     _filter = f;
@@ -174,11 +129,13 @@ class _TasksPageState extends State<TasksPage> {
           },
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        key: const Key('open-new-task'),
-        onPressed: _openNew,
-        child: const Icon(Icons.add),
-      ),
+      floatingActionButton: _showNewForm
+          ? null
+          : FloatingActionButton(
+              key: const Key('open-new-task'),
+              onPressed: _openNew,
+              child: const Icon(Icons.add),
+            ),
     );
   }
 
@@ -186,6 +143,13 @@ class _TasksPageState extends State<TasksPage> {
     return [
       TaskFilterBar(current: _filter, onChanged: _onFilterChanged),
       const SizedBox(height: 12),
+      if (_filtered.isEmpty)
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 24),
+          child: Text(
+            _source.isEmpty ? '暂无清扫任务，可通过自然语言控制或 + 创建任务' : '暂无符合筛选条件的任务',
+          ),
+        ),
       ..._filtered.map((t) => TaskCard(task: t, onTap: () => _openDetail(t))),
     ];
   }

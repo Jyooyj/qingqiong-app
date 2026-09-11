@@ -34,22 +34,14 @@ void main() {
     }
   });
 
-  testWidgets('single campus entry opens geographic map and returns', (
-    tester,
-  ) async {
+  testWidgets('map page opens geographic map directly', (tester) async {
     await tester.pumpWidget(const MaterialApp(home: MapPage()));
-    expect(find.byKey(const Key('open-campus-map')), findsNothing);
-    expect(find.text('查看校园地图'), findsOneWidget);
-    await tester.tap(find.byKey(const Key('open-geo-map')));
     await tester.pump();
-    await tester.pumpAndSettle();
     expect(find.byType(CampusGeoPreviewPage), findsOneWidget);
-    expect(find.text('校园地图'), findsOneWidget);
-    await tester.pageBack();
-    await tester.pump();
-    await tester.pumpAndSettle();
-    expect(find.byType(CampusGeoPreviewPage), findsNothing);
-    expect(find.text('查看校园地图'), findsOneWidget);
+    expect(find.byType(CampusGeoMapView), findsOneWidget);
+    expect(find.text('查看校园地图'), findsNothing);
+    expect(find.text('A区'), findsNothing);
+    expect(find.text('演示位置前进一步'), findsNothing);
     await tester.pumpWidget(const SizedBox.shrink());
   });
 }

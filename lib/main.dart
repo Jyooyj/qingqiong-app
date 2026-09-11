@@ -27,6 +27,15 @@ class QingQiongApp extends StatelessWidget {
         ),
         scaffoldBackgroundColor: const Color(0xFFF3F7F8),
         useMaterial3: true,
+        cardTheme: CardThemeData(
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+            side: const BorderSide(color: Color(0xffdce5e8)),
+          ),
+        ),
+        appBarTheme: const AppBarTheme(centerTitle: true),
+
         inputDecorationTheme: const InputDecorationTheme(
           border: OutlineInputBorder(),
         ),

@@ -115,7 +115,7 @@ class _NewTaskFormState extends State<NewTaskForm> {
               ),
               if (widget.onSave == null && widget.onExecute == null) ...[
                 const SizedBox(height: 8),
-                const Text('等待TaskController接入', key: Key('task-form-waiting')),
+                const Text('当前无法创建任务', key: Key('task-form-waiting')),
               ],
             ],
           ),

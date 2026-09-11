@@ -27,12 +27,17 @@ class TaskCard extends StatelessWidget {
                       style: Theme.of(context).textTheme.titleMedium,
                     ),
                     const SizedBox(height: 6),
-                    Row(
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 6,
                       children: [
                         Text(task.area, key: Key('task-area-${task.id}')),
                         const SizedBox(width: 8),
-                        Text(task.status, key: Key('task-status-${task.id}')),
-                        const Spacer(),
+                        Text(
+                          taskStatusLabel(task.status),
+                          key: Key('task-status-${task.id}'),
+                        ),
+                        Text('模式：${task.mode}'),
                         Text(task.timeText, key: Key('task-time-${task.id}')),
                       ],
                     ),

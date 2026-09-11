@@ -102,7 +102,7 @@ class ControlPanel extends StatelessWidget {
                     _ControlButton(
                       width: constraints.maxWidth,
                       buttonKey: const Key('voice-button'),
-                      label: '语音控制',
+                      label: '自然语言控制',
                       icon: Icons.mic_rounded,
                       onPressed: onVoice,
                       backgroundColor: Colors.green.shade700,

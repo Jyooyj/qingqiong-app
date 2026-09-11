@@ -17,10 +17,10 @@ class DemoFaultPanel extends StatelessWidget {
         key: const Key('demo-fault-panel'),
         leading: const Icon(Icons.science_outlined),
         title: const Text(
-          'Demo 故障模拟',
+          '异常模拟',
           style: TextStyle(fontWeight: FontWeight.w700),
         ),
-        subtitle: const Text('仅用于比赛演示 WarningService 联动'),
+        subtitle: const Text('模拟异常场景，查看告警与控制状态'),
         childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
         children: [
           Align(
@@ -64,13 +64,13 @@ class DemoFaultPanel extends StatelessWidget {
               key: const Key('clear-demo-faults-button'),
               onPressed: controller.clearDemoFaults,
               icon: const Icon(Icons.cleaning_services_outlined),
-              label: const Text('清除全部 Demo 故障'),
+              label: const Text('清除模拟异常'),
             ),
           ),
           if (_hasSafetyFault(status))
             const Padding(
               padding: EdgeInsets.only(top: 6),
-              child: Text('故障状态已送入 WarningService，控制权限已实时更新。'),
+              child: Text('异常状态已更新，请查看告警与控制状态。'),
             ),
         ],
       ),

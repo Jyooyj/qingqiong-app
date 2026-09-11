@@ -7,7 +7,22 @@ import 'package:robot_cleaner/pages/tasks_page.dart';
 
 void main() {
   testWidgets('Task UI: filters exist and filter works', (tester) async {
-    await tester.pumpWidget(const MaterialApp(home: TasksPage()));
+    await tester.pumpWidget(
+      MaterialApp(
+        home: TasksPage(
+          tasks: [
+            TaskViewData(
+              id: '2',
+              name: '测试',
+              area: '实验楼',
+              status: 'running',
+              progress: 48,
+              timeText: '',
+            ),
+          ],
+        ),
+      ),
+    );
     await tester.pumpAndSettle();
 
     // filter chips
@@ -218,7 +233,22 @@ void main() {
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
 
-    await tester.pumpWidget(const MaterialApp(home: TasksPage()));
+    await tester.pumpWidget(
+      MaterialApp(
+        home: TasksPage(
+          tasks: [
+            TaskViewData(
+              id: '2',
+              name: '会议室深度清洁',
+              area: '实验楼',
+              status: 'running',
+              progress: 48,
+              timeText: '',
+            ),
+          ],
+        ),
+      ),
+    );
     await tester.pumpAndSettle();
 
     expect(tester.takeException(), isNull);
