@@ -1,4 +1,4 @@
-import 'dart:async';
+﻿import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 
@@ -47,6 +47,11 @@ class TaskController extends ChangeNotifier implements TaskSafetyDecisionSink {
     required String mode,
     DateTime? plannedAt,
   }) {
+    final existing = getTaskById(id);
+    if (existing != null) {
+      return existing;
+    }
+
     final task = CleaningTask(
       id: id,
       name: name,
