@@ -7,7 +7,7 @@ void main() {
       final zone = CampusGeoMapData.findZoneById('lab_building');
 
       expect(zone, isNotNull);
-      expect(zone!.name, '实验楼');
+      expect(zone!.name, '公共实验楼');
     });
 
     test('findZoneByAlias returns canteen_1 for 一餐', () {

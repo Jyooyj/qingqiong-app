@@ -324,6 +324,25 @@ void main() {
     expect(find.byKey(const Key('dashboard-stats')), findsOneWidget);
     expect(find.text('已完成'), findsOneWidget);
   });
+  test('21. rapid duplicate create only stores one task', () {
+    final app = harness();
+
+    final first = app.session.createTask(
+      name: '重复创建测试',
+      area: 'A区',
+      mode: '标准',
+    );
+
+    final second = app.session.createTask(
+      name: '重复创建测试',
+      area: 'A区',
+      mode: '标准',
+    );
+
+    expect(second.id, first.id);
+    expect(app.session.taskController.tasks.length, 1);
+    expect(app.session.taskController.tasks.single.id, first.id);
+  });
 }
 
 class _Harness {

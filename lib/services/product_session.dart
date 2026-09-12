@@ -88,6 +88,11 @@ class ProductSession extends ChangeNotifier {
 
   late final StreamSubscription<Object?> _mapSubscription;
   int _taskSequence = 0;
+
+  CleaningTask? _lastCreatedTask;
+  String? _lastCreateSignature;
+  DateTime? _lastCreateAt;
+  static const Duration _duplicateCreateWindow = Duration(milliseconds: 800);
   bool _disposed = false;
 
   DashboardStats get dashboardStats =>
@@ -135,13 +140,36 @@ class ProductSession extends ChangeNotifier {
     String? id,
     DateTime? plannedAt,
   }) {
-    return taskController.createTask(
+    final now = DateTime.now();
+    final signature =
+        '$name|$area|$mode|${plannedAt?.microsecondsSinceEpoch ?? ''}';
+
+    final isRapidDuplicate =
+        id == null &&
+        _lastCreatedTask != null &&
+        _lastCreateSignature == signature &&
+        _lastCreateAt != null &&
+        now.difference(_lastCreateAt!) <= _duplicateCreateWindow;
+
+    if (isRapidDuplicate) {
+      return _lastCreatedTask!;
+    }
+
+    final task = taskController.createTask(
       id: id ?? _nextTaskId(),
       name: name,
       area: area,
       mode: mode,
       plannedAt: plannedAt,
     );
+
+    if (id == null) {
+      _lastCreatedTask = task;
+      _lastCreateSignature = signature;
+      _lastCreateAt = now;
+    }
+
+    return task;
   }
 
   bool startTask(String taskId) {
