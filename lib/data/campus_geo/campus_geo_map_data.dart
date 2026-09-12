@@ -221,6 +221,15 @@ class CampusGeoMapData {
         return route;
       }
     }
-    return null;
+
+    final zone = findZoneById(zoneId);
+    if (zone == null) {
+      return null;
+    }
+
+    return CampusGeoRoute(
+      zoneId: zoneId,
+      plannedPath: [chargingStation.position, zone.center],
+    );
   }
 }

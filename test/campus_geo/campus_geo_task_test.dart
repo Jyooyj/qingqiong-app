@@ -203,7 +203,7 @@ void main() {
   geoTest(
     'queued event after stop is ignored and missing route creates no task',
     (tester) async {
-      expect(coordinator.startCampusCleaning('library').success, isFalse);
+      expect(coordinator.startCampusCleaning('missing_zone').success, isFalse);
       expect(session.currentTask, isNull);
       coordinator.startCampusCleaning('lab_building');
       coordinator.stop();
