@@ -94,16 +94,7 @@ class _HomePageState extends State<HomePage> {
       return task.area;
     }
 
-    final campusTask = session.campusCoordinator.currentTask;
-    final selectedZoneName = session.campusCoordinator.selectedZoneName;
-
-    if (campusTask?.id == task.id &&
-        selectedZoneName != null &&
-        selectedZoneName.isNotEmpty) {
-      return selectedZoneName;
-    }
-
-    return task.area;
+    return session.campusCoordinator.displayAreaForTask(task);
   }
 
   @override

@@ -100,12 +100,22 @@ class CampusDemoCoordinator extends ChangeNotifier {
   List<CampusPoint> _plannedPath = const [];
   final List<CampusPoint> _cleanedPath = [];
   String? _campusTaskId;
+  final Map<String, String> _taskZoneIds = <String, String>{};
   String? _lastMessage;
   bool _disposed = false;
 
   String? get selectedZoneId => _selectedZone?.id;
   CampusZone? get selectedZone => _selectedZone;
   String? get selectedZoneName => _selectedZone?.name;
+  String displayAreaForTask(CleaningTask task) {
+    final zoneId = _taskZoneIds[task.id];
+    if (zoneId == null) {
+      return task.area;
+    }
+
+    return CampusMapData.findZoneById(zoneId)?.name ?? task.area;
+  }
+
   CampusPoint? get robotPosition => _robotPosition;
   List<CampusPoint> get plannedPath => _plannedPath;
   List<CampusPoint> get cleanedPath => List.unmodifiable(_cleanedPath);
@@ -183,6 +193,7 @@ class CampusDemoCoordinator extends ChangeNotifier {
       area: 'A区',
       mode: '校园标准清扫',
     );
+    _taskZoneIds[task.id] = zone.id;
     if (!session.startTask(task.id)) {
       return _record(
         ControlResult(

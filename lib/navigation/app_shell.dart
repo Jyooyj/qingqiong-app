@@ -121,24 +121,11 @@ class _AppShellState extends State<AppShell> {
     _session.startTask(task.id);
   }
 
-  String _displayAreaForTask(CleaningTask task) {
-    final campusTask = _session.campusCoordinator.currentTask;
-    final selectedZoneName = _session.campusCoordinator.selectedZoneName;
-
-    if (campusTask?.id == task.id &&
-        selectedZoneName != null &&
-        selectedZoneName.isNotEmpty) {
-      return selectedZoneName;
-    }
-
-    return task.area;
-  }
-
   TaskViewData _taskView(CleaningTask task) {
     return TaskViewData(
       id: task.id,
       name: task.name,
-      area: _displayAreaForTask(task),
+      area: _session.campusCoordinator.displayAreaForTask(task),
       status: task.status.name,
       progress: task.progress.round(),
       timeText: task.startedAt == null
