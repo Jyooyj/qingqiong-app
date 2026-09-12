@@ -11,6 +11,7 @@ import '../models/cleaning_task.dart';
 import '../models/dashboard_stats.dart';
 import '../models/robot_status.dart';
 import '../repositories/task_repository.dart';
+import '../repositories/custom_cleaning_area_store.dart';
 import '../utils/voice_command_parser.dart';
 import 'dashboard_stats_service.dart';
 import 'demo_simulation_engine.dart';
@@ -66,7 +67,9 @@ class ProductSession extends ChangeNotifier {
   }
 
   CampusDemoCoordinator? _campusCoordinator;
+  final CustomCleaningAreaStore customCleaningAreas = CustomCleaningAreaStore();
   String? _externallyDrivenTaskId;
+  final Map<String, String> _taskRequestIds = <String, String>{};
 
   /// Route-driven tasks advance through their location coordinator.
   void useExternalTaskProgress(String taskId) {
@@ -90,8 +93,12 @@ class ProductSession extends ChangeNotifier {
   int _taskSequence = 0;
   bool _disposed = false;
 
-  DashboardStats get dashboardStats =>
-      dashboardStatsService.calculate(taskController.tasks);
+  DashboardStats get dashboardStats => dashboardStatsService.calculate(
+    taskController.tasks,
+    customPolygons: {
+      for (final area in customCleaningAreas.areas) area.id: area.polygon,
+    },
+  );
 
   CleaningTask? get currentTask {
     final active = taskController.activeTask;
@@ -134,14 +141,34 @@ class ProductSession extends ChangeNotifier {
     required String mode,
     String? id,
     DateTime? plannedAt,
+    String? campusZoneId,
+    String? displayArea,
+    String? displayTaskName,
   }) {
-    return taskController.createTask(
-      id: id ?? _nextTaskId(),
+    final requestKey = '$name\u0000$area\u0000$mode\u0000${campusZoneId ?? ''}';
+    final existingId = _taskRequestIds[requestKey];
+    if (existingId != null) {
+      final existing = taskController.getTaskById(existingId);
+      if (existing != null &&
+          existing.status != CleaningTaskStatus.cancelled &&
+          existing.status != CleaningTaskStatus.completed &&
+          existing.status != CleaningTaskStatus.failed) {
+        return existing;
+      }
+    }
+    final taskId = id ?? _nextTaskId();
+    final task = taskController.createTask(
+      id: taskId,
       name: name,
       area: area,
       mode: mode,
       plannedAt: plannedAt,
+      campusZoneId: campusZoneId,
+      displayArea: displayArea,
+      displayTaskName: displayTaskName,
     );
+    _taskRequestIds[requestKey] = task.id;
+    return task;
   }
 
   bool startTask(String taskId) {
@@ -238,7 +265,7 @@ class ProductSession extends ChangeNotifier {
     );
   }
 
-  ControlResult returnToCharge() => robotController.charge();
+  ControlResult returnToCharge() => campusCoordinator.returnToCharge();
 
   ControlResult emergencyStop() => robotController.emergencyStop();
 
@@ -292,13 +319,14 @@ class ProductSession extends ChangeNotifier {
       ...CampusGeoMapData.zones.expand((z) => z.aliases),
     ].any(text.contains);
     if (!mentionsCampus) return null;
+    final interpretation = campusCoordinator.interpretVoiceText(text);
     final result = campusCoordinator.handleVoiceText(text);
     return VoiceExecutionResult(
       inputText: text,
       parseResult: VoiceCommandResult(
-        recognized: true,
-        command: result.action.name,
-        area: campusCoordinator.selectedZoneId,
+        recognized: interpretation.recognized,
+        command: interpretation.command,
+        area: interpretation.zoneId,
         originalText: text,
         message: result.message,
       ),
@@ -377,6 +405,7 @@ class ProductSession extends ChangeNotifier {
       return;
     }
     _disposed = true;
+    customCleaningAreas.dispose();
     _campusCoordinator?.dispose();
     robotController.removeListener(_onRobotChanged);
     taskController.removeListener(_onTaskChanged);

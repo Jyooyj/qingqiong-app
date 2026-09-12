@@ -5,11 +5,7 @@ class CampusObstacle {
   final CampusPoint position;
   final String? zoneId;
 
-  const CampusObstacle({
-    required this.id,
-    required this.position,
-    this.zoneId,
-  });
+  const CampusObstacle({required this.id, required this.position, this.zoneId});
 }
 
 class CampusChargingStation {

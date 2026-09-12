@@ -20,6 +20,7 @@ import 'campus_voice_action_mapper.dart';
 import 'campus_voice_command_interpreter.dart';
 import 'campus_zone_resolver.dart';
 import 'product_session.dart';
+import 'demo_task_statistics_service.dart';
 
 /// Connects campus commands and map state to the existing product session.
 /// The caller owns [session] and injected adapters. Adapters created here are
@@ -148,6 +149,8 @@ class CampusDemoCoordinator extends ChangeNotifier {
   ControlResult startCampusCleaning(String zoneId) {
     final zone = CampusMapData.findZoneById(zoneId);
     if (zone == null) {
+      final custom = session.customCleaningAreas.findById(zoneId);
+      if (custom != null) return startCustomCleaning(custom.id);
       return _record(
         const ControlResult(
           action: RobotAction.start,
@@ -177,11 +180,16 @@ class CampusDemoCoordinator extends ChangeNotifier {
       );
     }
     final route = CampusMapData.routeForZone(zone.id);
+    final displayArea =
+        CampusGeoMapData.findZoneById(zone.id)?.name ?? zone.name;
     final task = session.createTask(
       name: '${zone.name}清扫任务',
       // Legacy control-chain compatibility only; campus labels use zone.name.
       area: 'A区',
       mode: '校园标准清扫',
+      campusZoneId: zone.id,
+      displayArea: displayArea,
+      displayTaskName: '$displayArea清扫任务',
     );
     if (!session.startTask(task.id)) {
       return _record(
@@ -217,6 +225,79 @@ class CampusDemoCoordinator extends ChangeNotifier {
     );
   }
 
+  /// Starts a user-defined polygon using its generated closed boundary route.
+  /// It reuses the normal task/session lifecycle while avoiding any mutation of
+  /// the predefined CampusGeoMapData routes.
+  ControlResult startCustomCleaning(String areaId) {
+    final area = session.customCleaningAreas.findById(areaId);
+    if (area == null) {
+      return _record(
+        const ControlResult(
+          action: RobotAction.start,
+          success: false,
+          message: '未找到自定义清扫区域',
+        ),
+      );
+    }
+    if (!session.canStartTask) {
+      return _record(
+        const ControlResult(
+          action: RobotAction.start,
+          success: false,
+          message: '当前状态无法启动校园清扫任务',
+        ),
+      );
+    }
+    final route = area.generatedRoute;
+    if (route.plannedPath.length < 4) {
+      return _record(
+        const ControlResult(
+          action: RobotAction.start,
+          success: false,
+          message: '自定义区域路线无效',
+        ),
+      );
+    }
+    final task = session.createTask(
+      name: '${area.name}清扫任务',
+      area: 'A区',
+      mode: '自定义区域',
+      campusZoneId: area.id,
+      displayArea: area.name,
+      displayTaskName: '${area.name}清扫任务',
+    );
+    if (!session.startTask(task.id)) {
+      return _record(
+        ControlResult(
+          action: RobotAction.start,
+          success: false,
+          message: '${area.name}清扫任务启动失败',
+        ),
+      );
+    }
+    session.useExternalTaskProgress(task.id);
+    _campusTaskId = task.id;
+    _selectedZone = null;
+    _plannedPath = const [];
+    _cleanedPath.clear();
+    _geoPlannedPath = List.unmodifiable(route.plannedPath.map(_latLng));
+    _geoCleanedPath.clear();
+    geoLocationAdapter.loadPath(route.plannedPath);
+    _geoRobotPosition = _geoPlannedPath.first;
+    _geoMoving = true;
+    geoLocationAdapter.start();
+    return _record(
+      ControlResult(
+        action: RobotAction.start,
+        success: true,
+        message: '已开始${area.name}清扫任务',
+      ),
+    );
+  }
+
+  CampusVoiceInterpretation interpretVoiceText(String text) =>
+      _interpreter.interpret(text);
+
   ControlResult handleVoiceText(String text) {
     final action = mapper.map(_interpreter.interpret(text));
     if (!action.executable || action.type == CampusVoiceActionType.none) {
@@ -247,7 +328,7 @@ class CampusDemoCoordinator extends ChangeNotifier {
       case CampusVoiceActionType.stop:
         return stop();
       case CampusVoiceActionType.charge:
-        return _record(session.returnToCharge());
+        return _record(returnToCharge());
       case CampusVoiceActionType.emergencyStop:
         return emergencyStop();
       case CampusVoiceActionType.reset:
@@ -255,6 +336,37 @@ class CampusDemoCoordinator extends ChangeNotifier {
       case CampusVoiceActionType.none:
         throw StateError('Non-executable action was already handled');
     }
+  }
+
+  bool _returning = false;
+
+  ControlResult returnToCharge() {
+    final result = session.robotController.charge(travelRequired: true);
+    if (!result.success) return result;
+    final station = CampusGeoMapData.chargingStation.position;
+    final start = _geoRobotPosition;
+    // Demo waypoints are consumed by the same adapter as cleaning routes.
+    final path = List.generate(
+      11,
+      (i) => CampusGeoPoint(
+        latitude: i == 10
+            ? station.latitude
+            : start.latitude + (station.latitude - start.latitude) * i / 10,
+        longitude: i == 10
+            ? station.longitude
+            : start.longitude + (station.longitude - start.longitude) * i / 10,
+      ),
+    );
+    _returning = true;
+    _geoMoving = true;
+    _selectedZone = null;
+    _plannedPath = const [];
+    _geoPlannedPath = List.unmodifiable(path.map(_latLng));
+    locationAdapter.stop();
+    geoLocationAdapter.loadPath(path);
+    geoLocationAdapter.start();
+    notifyListeners();
+    return result;
   }
 
   ControlResult pause() {
@@ -314,6 +426,16 @@ class CampusDemoCoordinator extends ChangeNotifier {
   }
 
   void _synchronizeLocation() {
+    if (_returning) {
+      if (session.robotController.currentStatus.state ==
+              RobotState.returningToCharge &&
+          session.robotController.warningResult.canCharge) {
+        return;
+      }
+      _returning = false;
+      _geoMoving = false;
+      geoLocationAdapter.stop();
+    }
     final status = _locationTask?.status;
     final state = session.robotController.currentStatus.state;
     if (status != CleaningTaskStatus.running || state != RobotState.cleaning) {
@@ -336,6 +458,25 @@ class CampusDemoCoordinator extends ChangeNotifier {
   }
 
   void _onGeoPosition(CampusGeoPoint point) {
+    if (!_disposed &&
+        _returning &&
+        _geoMoving &&
+        session.robotController.currentStatus.state ==
+            RobotState.returningToCharge &&
+        point == geoLocationAdapter.currentPosition) {
+      _geoRobotPosition = _latLng(point);
+      if (point == CampusGeoMapData.chargingStation.position) {
+        _returning = false;
+        _geoMoving = false;
+        _geoPlannedPath = const [];
+        _selectedZone = null;
+        _plannedPath = const [];
+        geoLocationAdapter.stop();
+        session.robotController.arriveAtChargingStation();
+      }
+      notifyListeners();
+      return;
+    }
     if (_disposed ||
         !_geoMoving ||
         _campusTaskId == null ||
@@ -348,9 +489,46 @@ class CampusDemoCoordinator extends ChangeNotifier {
     if (_geoCleanedPath.isEmpty || _geoCleanedPath.last != _geoRobotPosition) {
       _geoCleanedPath.add(_geoRobotPosition);
     }
-    if (_geoRobotPosition == _geoPlannedPath.last) {
+    final task = _locationTask!;
+    // A closed route revisits its start only after traversing every segment.
+    final closedRoute =
+        _geoPlannedPath.length >= 4 &&
+        _geoPlannedPath.first == _geoPlannedPath.last;
+    final index = closedRoute
+        ? _geoCleanedPath.length - 1
+        : _geoPlannedPath.indexOf(_geoRobotPosition);
+    if (index >= 0 && _geoPlannedPath.length > 1) {
+      final progress = 100.0 * index / (_geoPlannedPath.length - 1);
+      session.taskController.updateTaskProgress(
+        task.id,
+        progress: progress,
+        cleanedArea: task.cleanedArea,
+        elapsed: task.elapsed,
+      );
+      final delta =
+          progress.round() - session.robotController.currentStatus.progress;
+      if (delta > 0) session.robotController.advanceProgress(delta);
+    }
+    if (_geoRobotPosition == _geoPlannedPath.last &&
+        (!closedRoute || index == _geoPlannedPath.length - 1)) {
       session.robotController.stop();
-      session.taskController.completeTask(_campusTaskId!);
+      final customArea = session.customCleaningAreas.findById(
+        task.campusZoneId ?? '',
+      );
+      if (customArea == null) {
+        session.taskController.completeTask(_campusTaskId!);
+      } else {
+        final metrics = const DemoTaskStatisticsService().forCustomArea(
+          task,
+          customArea,
+        );
+        session.taskController.completeTask(
+          task.id,
+          cleanedArea: metrics.area,
+          cleanedDistance: metrics.distance,
+          elapsed: metrics.duration,
+        );
+      }
     }
     notifyListeners();
   }

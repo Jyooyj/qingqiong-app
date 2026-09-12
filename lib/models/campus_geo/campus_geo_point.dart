@@ -2,10 +2,7 @@ class CampusGeoPoint {
   final double latitude;
   final double longitude;
 
-  const CampusGeoPoint({
-    required this.latitude,
-    required this.longitude,
-  });
+  const CampusGeoPoint({required this.latitude, required this.longitude});
 
   bool get isValid =>
       latitude >= -90 &&

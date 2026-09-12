@@ -1,18 +1,19 @@
+import '../services/task_statistics_formatter.dart';
 import 'package:flutter/material.dart';
 
 import '../controllers/robot_controller.dart';
 import '../pages/alerts_page.dart';
 import '../pages/home_page.dart';
-import '../pages/map_page.dart';
+import '../widgets/campus/cleaning_area_sheet.dart';
+import '../widgets/geo_map/campus_geo_preview_page.dart';
 import '../pages/profile_page.dart';
 import '../pages/tasks_page.dart';
 import '../models/cleaning_task.dart';
-import '../models/map_state.dart';
 import '../services/product_session.dart';
 import '../services/warning/warning_record.dart';
 import '../widgets/alerts/alert_view_data.dart';
-import '../widgets/map/map_view_data.dart';
 import '../widgets/tasks/task_view_data.dart';
+import '../services/task_statistics_service.dart';
 
 class AppShell extends StatefulWidget {
   const AppShell({super.key, this.controller, this.session})
@@ -58,6 +59,7 @@ class _AppShellState extends State<AppShell> {
             onNavigateToAlerts: () => setState(() => _index = 3),
           ),
           TasksPage(
+            onSelectCampusArea: _selectCampusArea,
             tasks: _session.taskController.tasks.map(_taskView).toList(),
             onCreate: _createTask,
             onExecute: _executeTask,
@@ -73,7 +75,7 @@ class _AppShellState extends State<AppShell> {
             connectionStatusText: _session.robotController.currentStatus.online
                 ? '已连接'
                 : '离线',
-            voiceStatusText: '文字指令可用 · 真实麦克风未接入',
+            voiceStatusText: '文字指令可用 · 麦克风语音可用（需授权）',
           ),
         ];
 
@@ -100,6 +102,21 @@ class _AppShellState extends State<AppShell> {
     );
   }
 
+  Future<void> _selectCampusArea() async {
+    final id = await showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      showDragHandle: true,
+      builder: (_) => CleaningAreaSheet(session: _session),
+    );
+    if (id == null || !mounted) return;
+    final result = _session.campusCoordinator.startCampusCleaning(id);
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(result.message)));
+  }
+
   void _createTask(TaskViewData view) {
     _session.createTask(
       id: view.id,
@@ -122,50 +139,39 @@ class _AppShellState extends State<AppShell> {
   }
 
   TaskViewData _taskView(CleaningTask task) {
+    final metrics = const TaskStatisticsService().forTask(
+      task,
+      customPolygon: task.campusZoneId == null
+          ? null
+          : _session.customCleaningAreas.findById(task.campusZoneId!)?.polygon,
+    );
     return TaskViewData(
       id: task.id,
-      name: task.name,
-      area: task.area,
+      name: task.displayTaskName ?? task.name,
+      area: task.displayArea ?? task.area,
       status: task.status.name,
       progress: task.progress.round(),
       timeText: task.startedAt == null
           ? '创建: ${_time(task.createdAt)}'
           : '开始: ${_time(task.startedAt!)}',
-      cleanedArea: task.cleanedArea,
-      durationText: _duration(task.elapsed),
-      startTimeText: task.startedAt == null ? null : _time(task.startedAt!),
+      cleanedArea: metrics.area,
+      cleanedDistance: metrics.distance,
+      durationText: _duration(metrics.duration),
+      startTimeText: metrics.startedAt == null
+          ? null
+          : _time(metrics.startedAt!),
+      endTimeText: metrics.completedAt != null
+          ? _time(metrics.completedAt!)
+          : null,
       mode: task.mode,
+      campusZoneId: task.campusZoneId,
+      displayArea: task.displayArea,
+      displayTaskName: task.displayTaskName,
     );
   }
 
-  MapPage _buildMapPage() {
-    final map = _session.simulationEngine.currentMapState;
-    final pathBlocked = _session.robotController.currentStatus.pathBlocked;
-    return MapPage(
-      campusCoordinator: _session.campusCoordinator,
-      zones: map.zones
-          .map(
-            (zone) => MapZoneView(
-              id: zone.id.toLowerCase(),
-              label: zone.name,
-              points: zone.boundary.map(_mapPoint).toList(),
-            ),
-          )
-          .toList(),
-      robotPosition: _mapPoint(map.robotPosition),
-      plannedPath: map.plannedPath.map(_mapPoint).toList(),
-      cleanedPath: map.cleanedPath.map(_mapPoint).toList(),
-      obstacles: <MapObstacleView>[
-        for (var index = 0; index < map.obstacles.length; index++)
-          MapObstacleView(
-            position: _mapPoint(map.obstacles[index].position),
-            code: pathBlocked && index == 0 ? 'WARN-007' : null,
-          ),
-      ],
-      chargingStation: _mapPoint(map.chargingStation.position),
-      highlightedWarningCode: pathBlocked ? 'WARN-007' : null,
-    );
-  }
+  CampusGeoPreviewPage _buildMapPage() =>
+      CampusGeoPreviewPage(coordinator: _session.campusCoordinator);
 
   AlertsPage _buildAlertsPage() {
     final current = _session.warningHistory.currentWarnings;
@@ -212,9 +218,6 @@ class _AppShellState extends State<AppShell> {
     );
   }
 
-  MapPointView _mapPoint(MapPoint point) =>
-      MapPointView(x: point.x, y: point.y);
-
   String _highestLevel(List<WarningRecord> records) {
     if (records.any((record) => record.level == WarningLevel.high)) {
       return '高';
@@ -245,10 +248,5 @@ class _AppShellState extends State<AppShell> {
       '${value.minute.toString().padLeft(2, '0')}:'
       '${value.second.toString().padLeft(2, '0')}';
 
-  String _duration(Duration value) {
-    final hours = value.inHours.toString().padLeft(2, '0');
-    final minutes = (value.inMinutes % 60).toString().padLeft(2, '0');
-    final seconds = (value.inSeconds % 60).toString().padLeft(2, '0');
-    return '$hours:$minutes:$seconds';
-  }
+  String _duration(Duration value) => TaskStatisticsFormatter.duration(value);
 }

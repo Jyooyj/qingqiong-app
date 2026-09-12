@@ -74,18 +74,9 @@ class MockMapData {
   ];
 
   static const List<Obstacle> obstacles = [
-    Obstacle(
-      id: 'obstacle_01',
-      position: MapPoint(x: 0.52, y: 0.28),
-    ),
-    Obstacle(
-      id: 'obstacle_02',
-      position: MapPoint(x: 0.38, y: 0.53),
-    ),
-    Obstacle(
-      id: 'obstacle_03',
-      position: MapPoint(x: 0.62, y: 0.78),
-    ),
+    Obstacle(id: 'obstacle_01', position: MapPoint(x: 0.52, y: 0.28)),
+    Obstacle(id: 'obstacle_02', position: MapPoint(x: 0.38, y: 0.53)),
+    Obstacle(id: 'obstacle_03', position: MapPoint(x: 0.62, y: 0.78)),
   ];
 
   static const ChargingStation chargingStation = ChargingStation(

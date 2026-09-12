@@ -4,9 +4,7 @@ import '../../models/campus/campus_point.dart';
 import 'location_adapter.dart';
 
 class DemoLocationAdapter implements LocationAdapter {
-  DemoLocationAdapter({
-    this.interval = const Duration(seconds: 1),
-  });
+  DemoLocationAdapter({this.interval = const Duration(seconds: 1)});
 
   final Duration interval;
 

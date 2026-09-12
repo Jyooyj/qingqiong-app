@@ -15,6 +15,7 @@ class TasksPage extends StatefulWidget {
     this.onPause,
     this.onResume,
     this.onStop,
+    this.onSelectCampusArea,
   });
 
   final List<TaskViewData>? tasks;
@@ -23,6 +24,7 @@ class TasksPage extends StatefulWidget {
   final void Function(TaskViewData)? onPause;
   final void Function(TaskViewData)? onResume;
   final void Function(TaskViewData)? onStop;
+  final VoidCallback? onSelectCampusArea;
 
   @override
   State<TasksPage> createState() => _TasksPageState();
@@ -112,10 +114,30 @@ class _TasksPageState extends State<TasksPage> {
     _showNewForm = false;
   });
 
-  void _openNew() => setState(() {
-    _showNewForm = true;
-    _selected = null;
-  });
+  Future<void> _openNew() async {
+    setState(() {
+      _showNewForm = false;
+      _selected = null;
+    });
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      showDragHandle: true,
+      builder: (context) => Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.viewInsetsOf(context).bottom,
+        ),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+          child: NewTaskForm(
+            onSave: widget.onCreate,
+            onExecute: widget.onExecute,
+          ),
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -176,7 +198,7 @@ class _TasksPageState extends State<TasksPage> {
       ),
       floatingActionButton: FloatingActionButton(
         key: const Key('open-new-task'),
-        onPressed: _openNew,
+        onPressed: widget.onSelectCampusArea ?? _openNew,
         child: const Icon(Icons.add),
       ),
     );
@@ -207,9 +229,44 @@ class _TasksPageState extends State<TasksPage> {
   }
 
   List<Widget> _buildSideColumnWidgets() {
+    if (_filtered.isEmpty) {
+      final emptyLabel = switch (_filter) {
+        'pending' => '暂无待执行的任务',
+        'running' => '暂无执行中的任务',
+        'paused' => '暂无已暂停的任务',
+        'cancelled' => '暂无已停止的任务',
+        'completed' => '暂无已完成的任务',
+        'failed' => '暂无失败的任务',
+        _ => '暂无任务',
+      };
+      return [
+        const SizedBox(height: 28),
+        Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                emptyLabel,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 6),
+              const Text(
+                '切换筛选条件查看其他任务',
+                style: TextStyle(fontSize: 13, color: Color(0xFF64727D)),
+              ),
+            ],
+          ),
+        ),
+      ];
+    }
     return [
       const SizedBox(height: 12),
-      const Text('选择任务查看详情', style: TextStyle(fontWeight: FontWeight.w700)),
+      const Center(
+        child: Text('选择任务查看详情', style: TextStyle(fontWeight: FontWeight.w700)),
+      ),
     ];
   }
 }

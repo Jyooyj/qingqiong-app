@@ -4,8 +4,5 @@ class CampusRoute {
   final String zoneId;
   final List<CampusPoint> plannedPath;
 
-  const CampusRoute({
-    required this.zoneId,
-    required this.plannedPath,
-  });
+  const CampusRoute({required this.zoneId, required this.plannedPath});
 }

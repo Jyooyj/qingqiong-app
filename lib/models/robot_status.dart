@@ -1,4 +1,11 @@
-enum RobotState { idle, cleaning, paused, charging, emergency }
+enum RobotState {
+  idle,
+  cleaning,
+  paused,
+  returningToCharge,
+  charging,
+  emergency,
+}
 
 class RobotStatus {
   final String robotId;
@@ -76,6 +83,8 @@ class RobotStatus {
         return '清扫中';
       case RobotState.paused:
         return '已暂停';
+      case RobotState.returningToCharge:
+        return '返回充电中';
       case RobotState.charging:
         return '充电中';
       case RobotState.emergency:

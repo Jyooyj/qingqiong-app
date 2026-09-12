@@ -45,13 +45,29 @@ class TaskController extends ChangeNotifier implements TaskSafetyDecisionSink {
     required String name,
     required String area,
     required String mode,
+    String? campusZoneId,
+    String? displayArea,
+    String? displayTaskName,
     DateTime? plannedAt,
   }) {
+    for (final existing in _tasks.reversed) {
+      if (existing.name == name &&
+          existing.area == area &&
+          existing.mode == mode &&
+          existing.status != CleaningTaskStatus.completed &&
+          existing.status != CleaningTaskStatus.cancelled &&
+          existing.status != CleaningTaskStatus.failed) {
+        return existing;
+      }
+    }
     final task = CleaningTask(
       id: id,
       name: name,
       area: area,
       mode: mode,
+      campusZoneId: campusZoneId,
+      displayArea: displayArea,
+      displayTaskName: displayTaskName,
       status: CleaningTaskStatus.pending,
       progress: 0,
       createdAt: DateTime.now(),
@@ -212,6 +228,7 @@ class TaskController extends ChangeNotifier implements TaskSafetyDecisionSink {
   bool completeTask(
     String taskId, {
     double cleanedArea = 0,
+    double? cleanedDistance,
     Duration? elapsed,
   }) {
     final index = _findTaskIndex(taskId);
@@ -233,6 +250,7 @@ class TaskController extends ChangeNotifier implements TaskSafetyDecisionSink {
         completedAt: DateTime.now(),
         cleanedArea: cleanedArea,
         elapsed: elapsed ?? task.elapsed,
+        cleanedDistance: cleanedDistance,
       ),
     );
 

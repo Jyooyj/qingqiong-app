@@ -91,7 +91,8 @@ void main() {
     await tester.pump();
 
     expect(controller.currentStatus.state, RobotState.idle);
-    expect(find.text('WARN-004'), findsNothing);
+    expect(find.text('WARN-004'), findsOneWidget);
+    expect(find.textContaining('已解决'), findsOneWidget);
   });
 
   testWidgets('语音控制面板显示解析与执行结果', (tester) async {
@@ -106,7 +107,7 @@ void main() {
     await tester.tap(find.byKey(const Key('execute-voice-command-button')));
     await tester.pump();
 
-    expect(find.text('解析结果：start / C区'), findsOneWidget);
+    expect(find.text('已识别：前往C区清扫'), findsOneWidget);
     expect(find.textContaining('执行成功'), findsOneWidget);
     expect(controller.currentStatus.area, 'C区');
     expect(controller.currentStatus.state, RobotState.cleaning);
@@ -117,12 +118,13 @@ void main() {
 
     await tapVisible(tester, find.byKey(const Key('demo-fault-panel')));
     await tester.pumpAndSettle();
-    await tapVisible(tester, find.byKey(const Key('fault-低电量')));
+    await tapVisible(tester, find.byKey(const Key('fault-严重低电量')));
     await tester.pump();
 
     expect(controller.currentStatus.battery, 9);
     expect(find.text('WARN-002'), findsOneWidget);
-    expect(find.text('电量过低，禁止开始任务'), findsOneWidget);
+    expect(find.text('严重低电量'), findsWidgets);
+    expect(find.textContaining('待处理'), findsOneWidget);
   });
 
   testWidgets('360x800 无布局异常且核心按钮可滚动访问', (tester) async {

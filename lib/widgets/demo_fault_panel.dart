@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../controllers/robot_controller.dart';
 import '../models/robot_status.dart';
+import '../services/warning_service.dart';
 
 class DemoFaultPanel extends StatelessWidget {
   const DemoFaultPanel({super.key, required this.controller});
@@ -17,10 +18,10 @@ class DemoFaultPanel extends StatelessWidget {
         key: const Key('demo-fault-panel'),
         leading: const Icon(Icons.science_outlined),
         title: const Text(
-          'Demo 故障模拟',
+          '异常模拟',
           style: TextStyle(fontWeight: FontWeight.w700),
         ),
-        subtitle: const Text('仅用于比赛演示 WarningService 联动'),
+        subtitle: const Text('模拟低电量、离线、定位异常、路径阻塞与设备故障'),
         childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
         children: [
           Align(
@@ -31,8 +32,23 @@ class DemoFaultPanel extends StatelessWidget {
               children: [
                 _faultChip(
                   label: '低电量',
-                  selected: status.battery < 10,
-                  onSelected: (value) => controller.setBattery(value ? 9 : 82),
+                  selected: controller.warningResult.activeWarningCodes
+                      .contains('WARN-001'),
+                  onSelected: (value) => controller.setBattery(
+                    value
+                        ? (WarningService.criticalBatteryThreshold +
+                                  WarningService.lowBatteryThreshold) ~/
+                              2
+                        : 82,
+                  ),
+                ),
+                _faultChip(
+                  label: '严重低电量',
+                  selected: controller.warningResult.activeWarningCodes
+                      .contains('WARN-002'),
+                  onSelected: (value) => controller.setBattery(
+                    value ? WarningService.criticalBatteryThreshold - 1 : 82,
+                  ),
                 ),
                 _faultChip(
                   label: '离线',
@@ -64,13 +80,13 @@ class DemoFaultPanel extends StatelessWidget {
               key: const Key('clear-demo-faults-button'),
               onPressed: controller.clearDemoFaults,
               icon: const Icon(Icons.cleaning_services_outlined),
-              label: const Text('清除全部 Demo 故障'),
+              label: const Text('清除全部异常'),
             ),
           ),
           if (_hasSafetyFault(status))
             const Padding(
               padding: EdgeInsets.only(top: 6),
-              child: Text('故障状态已送入 WarningService，控制权限已实时更新。'),
+              child: Text('异常已生效，控制权限已实时更新。'),
             ),
         ],
       ),
@@ -92,7 +108,7 @@ class DemoFaultPanel extends StatelessWidget {
 
   bool _hasSafetyFault(RobotStatus status) {
     return !status.online ||
-        status.battery < 10 ||
+        status.battery < WarningService.lowBatteryThreshold ||
         status.locationFailed ||
         status.pathBlocked ||
         status.deviceError;

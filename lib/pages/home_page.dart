@@ -1,6 +1,8 @@
+import '../services/task_statistics_formatter.dart';
 import 'package:flutter/material.dart';
 
 import '../controllers/robot_controller.dart';
+import '../widgets/campus/quick_cleaning_card.dart';
 import '../models/cleaning_task.dart';
 import '../services/product_session.dart';
 import '../services/voice_control_service.dart';
@@ -11,6 +13,7 @@ import '../widgets/dashboard/current_task_card.dart';
 import '../widgets/dashboard/dashboard_stats_card.dart';
 import '../widgets/dashboard/recent_alert_card.dart';
 import '../widgets/voice_control_sheet.dart';
+import '../services/task_statistics_service.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({
@@ -33,25 +36,23 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   late final RobotController _controller;
   late final VoiceControlService _voiceService;
-  late final bool _ownsController;
+  late final ProductSession _session;
+  late final bool _ownsSession;
 
   @override
   void initState() {
     super.initState();
-    _ownsController = widget.session == null && widget.controller == null;
-    _controller =
-        widget.session?.robotController ??
-        widget.controller ??
-        RobotController();
-    _voiceService =
-        widget.session?.voiceControlService ??
-        VoiceControlService(controller: _controller);
+    _ownsSession = widget.session == null;
+    _session =
+        widget.session ?? ProductSession(robotController: widget.controller);
+    _controller = _session.robotController;
+    _voiceService = _session.voiceControlService;
   }
 
   @override
   void dispose() {
-    if (_ownsController) {
-      _controller.dispose();
+    if (_ownsSession) {
+      _session.dispose();
     }
     super.dispose();
   }
@@ -65,6 +66,7 @@ class _HomePageState extends State<HomePage> {
       ..hideCurrentSnackBar()
       ..showSnackBar(
         SnackBar(
+          behavior: SnackBarBehavior.floating,
           content: Text(result.message),
           backgroundColor: result.success
               ? Colors.green.shade700
@@ -87,12 +89,25 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
-      animation: _controller,
+      animation: _session,
       builder: (context, _) {
         final status = _controller.currentStatus;
         final warning = _controller.warningResult;
-        final task = widget.session?.currentTask;
-        final stats = widget.session?.dashboardStats;
+        final records = _session.warningHistory;
+        final recent =
+            records.currentWarnings.lastOrNull ?? records.allRecords.lastOrNull;
+        final task = _session.currentTask;
+        final stats = _session.dashboardStats;
+        final taskMetrics = task == null
+            ? null
+            : const TaskStatisticsService().forTask(
+                task,
+                customPolygon: task.campusZoneId == null
+                    ? null
+                    : _session.customCleaningAreas
+                          .findById(task.campusZoneId!)
+                          ?.polygon,
+              );
 
         return Scaffold(
           appBar: AppBar(
@@ -159,41 +174,50 @@ class _HomePageState extends State<HomePage> {
                                     // Device overview (reuse RobotStatusCard)
                                     RobotStatusCard(
                                       status: _controller.currentStatus,
+                                      displayArea: task?.displayArea,
                                     ),
                                     const SizedBox(height: 12),
-                                    // Area selector (desktop only) placed after status and before current task
-                                    _AreaSelector(
-                                      selectedArea: status.area,
-                                      enabled: _controller.canSelectArea,
-                                      onSelected: (area) => _run(
-                                        () => _controller.selectArea(area),
-                                      ),
+                                    // Quick task entries are separate from the full area catalog.
+                                    QuickCleaningCard(
+                                      session: _session,
+                                      onRun: _run,
                                     ),
                                     const SizedBox(height: 12),
                                     // Current task card
                                     CurrentTaskCard(
                                       key: const Key('dashboard-current-task'),
-                                      title: task?.name ?? '暂无任务',
-                                      area: task?.area ?? status.area,
+                                      title:
+                                          task?.displayTaskName ??
+                                          task?.name ??
+                                          '暂无任务',
+                                      area:
+                                          task?.displayArea ??
+                                          task?.area ??
+                                          status.area,
                                       statusText: _taskStatus(task),
                                       progress:
                                           task?.progress.round() ??
                                           status.progress,
                                       eta: _taskEta(task),
+                                      empty: task == null,
                                       onTap: widget.onNavigateToTasks,
+                                      cleanedArea: taskMetrics?.area,
+                                      cleanedDistance: taskMetrics?.distance,
+                                      duration: taskMetrics == null
+                                          ? null
+                                          : _duration(taskMetrics.duration),
                                     ),
                                     const SizedBox(height: 12),
                                     // Quick stats
                                     DashboardStatsCard(
                                       key: const Key('dashboard-stats'),
-                                      tasksToday: stats?.todayTaskCount ?? 0,
-                                      completed:
-                                          stats?.todayCompletedCount ?? 0,
-                                      area:
-                                          '${(stats?.totalCleanedArea ?? 0).toStringAsFixed(1)} m²',
+                                      tasksToday: stats.todayTaskCount,
+                                      completed: stats.todayCompletedCount,
+                                      area: TaskStatisticsFormatter.area(
+                                        stats.totalCleanedArea,
+                                      ),
                                       duration: _duration(
-                                        stats?.totalCleaningDuration ??
-                                            Duration.zero,
+                                        stats.totalCleaningDuration,
                                       ),
                                     ),
                                     const SizedBox(height: 12),
@@ -201,6 +225,7 @@ class _HomePageState extends State<HomePage> {
                                     RecentAlertCard(
                                       key: const Key('dashboard-recent-alert'),
                                       warning: warning,
+                                      record: recent,
                                       occurredAtText: '刚刚',
                                       onTap: widget.onNavigateToAlerts,
                                     ),
@@ -223,7 +248,10 @@ class _HomePageState extends State<HomePage> {
                         : Column(
                             children: [
                               // Device overview
-                              RobotStatusCard(status: status),
+                              RobotStatusCard(
+                                status: status,
+                                displayArea: task?.displayArea,
+                              ),
                               const SizedBox(height: 10),
                               // Place control panel early so core buttons stay visible
                               _buildControlPanel(),
@@ -231,38 +259,47 @@ class _HomePageState extends State<HomePage> {
                               // Current task card
                               CurrentTaskCard(
                                 key: const Key('dashboard-current-task'),
-                                title: task?.name ?? '暂无任务',
-                                area: task?.area ?? status.area,
+                                title:
+                                    task?.displayTaskName ??
+                                    task?.name ??
+                                    '暂无任务',
+                                area:
+                                    task?.displayArea ??
+                                    task?.area ??
+                                    status.area,
                                 statusText: _taskStatus(task),
                                 progress:
                                     task?.progress.round() ?? status.progress,
                                 eta: _taskEta(task),
+                                empty: task == null,
                                 onTap: widget.onNavigateToTasks,
+                                cleanedArea: taskMetrics?.area,
+                                cleanedDistance: taskMetrics?.distance,
+                                duration: taskMetrics == null
+                                    ? null
+                                    : _duration(taskMetrics.duration),
                               ),
                               const SizedBox(height: 10),
                               // Recent alert or warning card
                               RecentAlertCard(
                                 key: const Key('dashboard-recent-alert'),
                                 warning: warning,
+                                record: recent,
                                 occurredAtText: '刚刚',
                                 onTap: widget.onNavigateToAlerts,
                               ),
                               const SizedBox(height: 10),
-                              _AreaSelector(
-                                selectedArea: status.area,
-                                enabled: _controller.canSelectArea,
-                                onSelected: (area) =>
-                                    _run(() => _controller.selectArea(area)),
-                              ),
+                              QuickCleaningCard(session: _session, onRun: _run),
                               const SizedBox(height: 10),
                               DashboardStatsCard(
                                 key: const Key('dashboard-stats'),
-                                tasksToday: stats?.todayTaskCount ?? 0,
-                                completed: stats?.todayCompletedCount ?? 0,
-                                area:
-                                    '${(stats?.totalCleanedArea ?? 0).toStringAsFixed(1)} m²',
+                                tasksToday: stats.todayTaskCount,
+                                completed: stats.todayCompletedCount,
+                                area: TaskStatisticsFormatter.area(
+                                  stats.totalCleanedArea,
+                                ),
                                 duration: _duration(
-                                  stats?.totalCleaningDuration ?? Duration.zero,
+                                  stats.totalCleaningDuration,
                                 ),
                               ),
                               const SizedBox(height: 10),
@@ -280,41 +317,25 @@ class _HomePageState extends State<HomePage> {
   }
 
   ControlPanel _buildControlPanel() {
-    final session = widget.session;
+    final session = _session;
     return ControlPanel(
-      onStart: (session?.canStartTask ?? _controller.canStart)
-          ? () => _run(
-              session == null ? _controller.start : session.startOrCreateTask,
-            )
+      onStart: session.canStartTask
+          ? () => _run(session.startOrCreateTask)
           : null,
-      onPause: (session?.canPauseTask ?? _controller.canPause)
-          ? () => _run(
-              session == null ? _controller.pause : session.pauseCurrentTask,
-            )
+      onPause: session.canPauseTask
+          ? () => _run(session.pauseCurrentTask)
           : null,
-      onResume: (session?.canResumeTask ?? _controller.canResume)
-          ? () => _run(
-              session == null ? _controller.resume : session.resumeCurrentTask,
-            )
+      onResume: session.canResumeTask
+          ? () => _run(session.resumeCurrentTask)
           : null,
-      onStop: (session?.canStopTask ?? _controller.canStop)
-          ? () => _run(
-              session == null ? _controller.stop : session.stopCurrentTask,
-            )
+      onStop: session.canStopTask ? () => _run(session.stopCurrentTask) : null,
+      onCharge: _controller.canCharge
+          ? () => _run(session.returnToCharge)
           : null,
-      onCharge: _controller.canCharge ? () => _run(_controller.charge) : null,
       onEmergency: _controller.canEmergencyStop
-          ? () => _run(
-              session == null
-                  ? _controller.emergencyStop
-                  : session.emergencyStop,
-            )
+          ? () => _run(session.emergencyStop)
           : null,
-      onReset: _controller.canReset
-          ? () => _run(
-              session == null ? _controller.reset : session.resetEmergency,
-            )
-          : null,
+      onReset: _controller.canReset ? () => _run(session.resetEmergency) : null,
       onVoice: _showVoiceControl,
     );
   }
@@ -341,103 +362,5 @@ class _HomePageState extends State<HomePage> {
     return '约 $seconds 秒';
   }
 
-  String _duration(Duration value) {
-    final hours = value.inHours.toString().padLeft(2, '0');
-    final minutes = (value.inMinutes % 60).toString().padLeft(2, '0');
-    final seconds = (value.inSeconds % 60).toString().padLeft(2, '0');
-    return '$hours:$minutes:$seconds';
-  }
-}
-
-// _OverviewColumn removed; dashboard widgets are integrated directly in HomePage.
-
-class _AreaSelector extends StatelessWidget {
-  const _AreaSelector({
-    required this.selectedArea,
-    required this.enabled,
-    required this.onSelected,
-  });
-
-  final String selectedArea;
-  final bool enabled;
-  final ValueChanged<String> onSelected;
-
-  static const List<String> _areas = <String>['A区', 'B区', 'C区'];
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      key: const Key('area-selector'),
-      elevation: 1,
-      margin: EdgeInsets.zero,
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Text(
-                  '清扫区域',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                const Spacer(),
-                Text(enabled ? '待机时可选' : '任务中已锁定'),
-              ],
-            ),
-            const SizedBox(height: 10),
-            Row(
-              children: [
-                for (var index = 0; index < _areas.length; index++) ...[
-                  if (index > 0) const SizedBox(width: 8),
-                  Expanded(
-                    child: _AreaButton(
-                      area: _areas[index],
-                      selected: selectedArea == _areas[index],
-                      enabled: enabled,
-                      onPressed: () => onSelected(_areas[index]),
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _AreaButton extends StatelessWidget {
-  const _AreaButton({
-    required this.area,
-    required this.selected,
-    required this.enabled,
-    required this.onPressed,
-  });
-
-  final String area;
-  final bool selected;
-  final bool enabled;
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      height: 44,
-      child: selected
-          ? FilledButton(
-              key: Key('area-$area'),
-              onPressed: enabled ? onPressed : null,
-              child: Text(area, maxLines: 1),
-            )
-          : OutlinedButton(
-              key: Key('area-$area'),
-              onPressed: enabled ? onPressed : null,
-              child: Text(area, maxLines: 1),
-            ),
-    );
-  }
+  String _duration(Duration value) => TaskStatisticsFormatter.duration(value);
 }

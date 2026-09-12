@@ -7,6 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:robot_cleaner/widgets/geo_map/campus_geo_map_view.dart';
 import 'package:robot_cleaner/widgets/geo_map/campus_geo_map_fallback.dart';
+import 'package:robot_cleaner/models/campus_geo/campus_building.dart';
 
 class _Tiles extends TileProvider {
   @override
@@ -45,6 +46,16 @@ Widget host({
     body: SingleChildScrollView(
       child: CampusGeoMapView(
         zones: [zone],
+        // This fixture tests a synthetic polygon, independent of live POIs.
+        campusBuildings: [
+          CampusBuilding(
+            id: zone.id,
+            zoneId: zone.id,
+            name: zone.name,
+            latitude: center.latitude,
+            longitude: center.longitude,
+          ),
+        ],
         selectedZoneId: selected,
         robotPosition: robot,
         plannedPath: overlays
@@ -101,6 +112,7 @@ void main() {
                   polygon: const [],
                 ),
               ],
+              campusBuildings: const [],
               onZoneTap: (id) => selected = id,
               tileProviderFactory: () => _Tiles(),
             ),
@@ -176,7 +188,13 @@ void main() {
     await settle(tester);
     expect(controller.camera.center, offsetCenter);
     expect(
-      tester.widget<MarkerLayer>(find.byType(MarkerLayer)).markers.last.point,
+      tester
+          .widget<MarkerLayer>(
+            find.byKey(const Key('geo-dynamic-marker-layer')),
+          )
+          .markers
+          .last
+          .point,
       moved,
     );
     await tester.pump(const Duration(seconds: 2));
