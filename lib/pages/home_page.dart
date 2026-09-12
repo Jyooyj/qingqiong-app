@@ -84,6 +84,28 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  String _displayAreaForTask(CleaningTask? task) {
+    if (task == null) {
+      return '--';
+    }
+
+    final session = widget.session;
+    if (session == null) {
+      return task.area;
+    }
+
+    final campusTask = session.campusCoordinator.currentTask;
+    final selectedZoneName = session.campusCoordinator.selectedZoneName;
+
+    if (campusTask?.id == task.id &&
+        selectedZoneName != null &&
+        selectedZoneName.isNotEmpty) {
+      return selectedZoneName;
+    }
+
+    return task.area;
+  }
+
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
@@ -174,11 +196,9 @@ class _HomePageState extends State<HomePage> {
                                     CurrentTaskCard(
                                       key: const Key('dashboard-current-task'),
                                       title: task?.name ?? '暂无任务',
-                                      area: task?.area ?? status.area,
+                                      area: _displayAreaForTask(task),
                                       statusText: _taskStatus(task),
-                                      progress:
-                                          task?.progress.round() ??
-                                          status.progress,
+                                      progress: task?.progress.round() ?? 0,
                                       eta: _taskEta(task),
                                       onTap: widget.onNavigateToTasks,
                                     ),
@@ -232,10 +252,9 @@ class _HomePageState extends State<HomePage> {
                               CurrentTaskCard(
                                 key: const Key('dashboard-current-task'),
                                 title: task?.name ?? '暂无任务',
-                                area: task?.area ?? status.area,
+                                area: _displayAreaForTask(task),
                                 statusText: _taskStatus(task),
-                                progress:
-                                    task?.progress.round() ?? status.progress,
+                                progress: task?.progress.round() ?? 0,
                                 eta: _taskEta(task),
                                 onTap: widget.onNavigateToTasks,
                               ),
