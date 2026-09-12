@@ -122,6 +122,9 @@ typedef _WarningPredicate =
     );
 
 class WarningService {
+  static const int criticalBatteryThreshold = 10;
+  static const int lowBatteryThreshold = 20;
+
   /// 此列表同时定义标准故障匹配和主提示优先级。
   static final List<_WarningRule> _orderedRules = <_WarningRule>[
     _WarningRule(
@@ -153,7 +156,7 @@ class WarningService {
       message: '电量过低，禁止开始任务',
       severity: 'high',
       matches: (state, batteryInRange, batteryValid) =>
-          batteryInRange && state.battery < 10,
+          batteryInRange && state.battery < criticalBatteryThreshold,
     ),
     _WarningRule(
       warningCode: 'WARN-006',
@@ -172,7 +175,9 @@ class WarningService {
       message: '电量不足，建议返回充电',
       severity: 'medium',
       matches: (state, batteryInRange, batteryValid) =>
-          batteryInRange && state.battery >= 10 && state.battery < 20,
+          batteryInRange &&
+          state.battery >= criticalBatteryThreshold &&
+          state.battery < lowBatteryThreshold,
     ),
     _WarningRule(
       warningCode: 'WARN-008',
@@ -280,7 +285,8 @@ class WarningService {
     RobotWarningState state,
     bool batteryValid,
   ) {
-    final hasSevereLowBattery = batteryValid && state.battery < 10;
+    final hasSevereLowBattery =
+        batteryValid && state.battery < criticalBatteryThreshold;
 
     return _ControlPermissions(
       canStart:
@@ -304,7 +310,11 @@ class WarningService {
           !state.locationFailed &&
           !state.pathBlocked,
       canStop: state.online && !state.emergency,
-      canCharge: state.online && !state.emergency && !state.deviceError,
+      canCharge:
+          state.online &&
+          !state.emergency &&
+          !state.deviceError &&
+          !state.locationFailed,
       canEmergencyStop: state.online,
       canReset: state.online && state.emergency,
     );

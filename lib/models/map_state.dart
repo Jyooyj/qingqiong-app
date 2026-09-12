@@ -2,10 +2,7 @@ class MapPoint {
   final double x;
   final double y;
 
-  const MapPoint({
-    required this.x,
-    required this.y,
-  });
+  const MapPoint({required this.x, required this.y});
 }
 
 class CleaningZone {
@@ -24,10 +21,7 @@ class Obstacle {
   final String id;
   final MapPoint position;
 
-  const Obstacle({
-    required this.id,
-    required this.position,
-  });
+  const Obstacle({required this.id, required this.position});
 }
 
 class ChargingStation {

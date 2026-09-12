@@ -36,9 +36,10 @@ class _NewTaskFormState extends State<NewTaskForm> {
   @override
   Widget build(BuildContext context) {
     return Card(
+      elevation: 0,
       margin: EdgeInsets.zero,
       child: Padding(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(16),
         child: Form(
           key: _formKey,
           child: Column(

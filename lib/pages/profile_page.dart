@@ -39,7 +39,8 @@ class ProfilePage extends StatelessWidget {
             final maxContentWidth = constraints.maxWidth > 760
                 ? 760.0
                 : constraints.maxWidth;
-            return Center(
+            return Align(
+              alignment: Alignment.topCenter,
               child: ConstrainedBox(
                 constraints: BoxConstraints(maxWidth: maxContentWidth),
                 child: SingleChildScrollView(

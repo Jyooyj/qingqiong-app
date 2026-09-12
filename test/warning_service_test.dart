@@ -83,8 +83,8 @@ void main() {
       canStart: false,
       canPause: false,
       canResume: false,
-      canStop: false,
       canCharge: false,
+      canStop: false,
       canEmergencyStop: false,
     ),
     const _WarningCase(
@@ -99,8 +99,8 @@ void main() {
       canStart: false,
       canPause: false,
       canResume: false,
-      canStop: false,
       canCharge: false,
+      canStop: false,
       canReset: true,
       requireReset: true,
     ),
@@ -130,6 +130,7 @@ void main() {
       canStart: false,
       canPause: false,
       canResume: false,
+      canCharge: false,
     ),
     const _WarningCase(
       name: '路径阻塞触发 WARN-007 和 pause 动作',
@@ -179,8 +180,8 @@ void main() {
       canStart: false,
       canPause: false,
       canResume: false,
-      canStop: false,
       canCharge: false,
+      canStop: false,
       canReset: true,
       requireReset: true,
     ),
@@ -196,6 +197,7 @@ void main() {
       canStart: false,
       canPause: false,
       canResume: false,
+      canCharge: false,
     ),
     const _WarningCase(
       name: '急停离线低电量组合保留优先级且离线禁止复位',
@@ -297,6 +299,7 @@ void main() {
       canStart: false,
       canPause: false,
       canResume: false,
+      canCharge: false,
     ),
     const _WarningCase(
       name: '电量边界 10% 触发 WARN-001',

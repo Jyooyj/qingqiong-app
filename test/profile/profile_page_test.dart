@@ -143,6 +143,16 @@ void main() {
       await tester.pumpAndSettle();
       expect(tester.takeException(), isNull);
 
+      final headerBottom = tester.getBottomLeft(find.byType(AppBar)).dy;
+      final deviceTop = tester
+          .getTopLeft(find.byKey(const Key('profile-device-info')))
+          .dy;
+      expect(
+        deviceTop - headerBottom,
+        inInclusiveRange(16, 24),
+        reason: 'Device card should sit directly below the header at $size',
+      );
+
       await tester.ensureVisible(find.byKey(const Key('profile-demo-mode')));
       await tester.pumpAndSettle();
       await tester.ensureVisible(

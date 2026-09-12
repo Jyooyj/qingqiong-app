@@ -1,3 +1,4 @@
+import '../../services/task_statistics_formatter.dart';
 import 'package:flutter/material.dart';
 import 'task_view_data.dart';
 
@@ -33,9 +34,9 @@ class TaskDetailView extends StatelessWidget {
           children: [
             Text(task.name, style: Theme.of(context).textTheme.titleLarge),
             const SizedBox(height: 8),
-            Text('区域: ${task.area}'),
+            Text('区域: ${task.presentationArea}'),
             const SizedBox(height: 4),
-            Text('状态: ${task.status}'),
+            Text('状态: ${task.statusText}'),
             const SizedBox(height: 4),
             LinearProgressIndicator(
               value: (task.progress / 100).clamp(0.0, 1.0),
@@ -43,11 +44,17 @@ class TaskDetailView extends StatelessWidget {
             const SizedBox(height: 4),
             Text('进度: ${task.progress}%'),
             const SizedBox(height: 8),
-            Text('已清扫面积: ${task.cleanedArea} m²'),
+            Text('已清扫面积: ${TaskStatisticsFormatter.area(task.cleanedArea)}'),
             const SizedBox(height: 4),
             Text('耗时: ${task.durationText}'),
+            if (task.cleanedDistance > 0)
+              Text('清扫距离: ${task.cleanedDistance.toStringAsFixed(1)} m'),
             const SizedBox(height: 4),
             Text('开始时间: ${task.startTimeText ?? '-'}'),
+            if (task.endTimeText != null) ...[
+              const SizedBox(height: 4),
+              Text('结束时间: ${task.endTimeText}'),
+            ],
             const SizedBox(height: 12),
             if (isPending) ...[
               FilledButton(

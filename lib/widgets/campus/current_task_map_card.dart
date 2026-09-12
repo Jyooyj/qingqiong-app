@@ -1,3 +1,4 @@
+import '../../services/task_statistics_formatter.dart';
 import 'package:flutter/material.dart';
 
 enum CampusTaskStatus {
@@ -105,13 +106,13 @@ class CurrentTaskMapCard extends StatelessWidget {
                   '清扫面积',
                   area == null || !area.isFinite || area < 0
                       ? '—'
-                      : '${area.toStringAsFixed(1)} m²',
+                      : TaskStatisticsFormatter.area(area),
                 ),
                 _metric(
                   '耗时',
                   elapsed == null || elapsed.isNegative
                       ? '—'
-                      : '${elapsed.inMinutes.toString().padLeft(2, '0')}:${(elapsed.inSeconds % 60).toString().padLeft(2, '0')}',
+                      : TaskStatisticsFormatter.duration(elapsed),
                 ),
                 _metric('电量', battery == null ? '—' : '${battery.round()}%'),
               ],

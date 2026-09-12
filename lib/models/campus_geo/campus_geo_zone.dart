@@ -6,6 +6,8 @@ class CampusGeoZone {
   final List<String> aliases;
   final CampusGeoPoint center;
   final List<CampusGeoPoint> polygon;
+  final String type;
+  final bool isTaskTarget;
 
   const CampusGeoZone({
     required this.id,
@@ -13,6 +15,8 @@ class CampusGeoZone {
     required this.aliases,
     required this.center,
     required this.polygon,
+    this.type = 'other',
+    this.isTaskTarget = false,
   });
 
   bool matchesAlias(String text) {

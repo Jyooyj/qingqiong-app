@@ -42,19 +42,32 @@ class WarningHistoryService {
     String? taskId,
     DateTime? occurredAt,
   }) {
-    final activeCodes = result.activeWarningCodes.toSet();
-    _activeRecordIdsByCode.removeWhere(
-      (code, recordId) => !activeCodes.contains(code),
-    );
+    final activeCodes = _activeCodes(result);
+    final clearedIds = _activeRecordIdsByCode.entries
+        .where((entry) => !activeCodes.contains(entry.key))
+        .map((entry) => entry.value)
+        .toList();
+    for (final id in clearedIds) {
+      resolveWarning(id, reevaluated: result);
+    }
 
-    for (final code in result.activeWarningCodes) {
+    for (final code in activeCodes) {
       if (_activeRecordIdsByCode.containsKey(code)) {
         continue;
       }
-      final definition = _definitions[code];
-      if (definition == null) {
-        continue;
-      }
+      // Archiving must not depend on the presentation catalog being complete.
+      final definition =
+          _definitions[code] ??
+          _WarningDefinition(
+            title: result.message ?? '安全提示',
+            level: switch (result.severity) {
+              'high' => WarningLevel.high,
+              'medium' => WarningLevel.medium,
+              _ => WarningLevel.low,
+            },
+            message: result.message ?? '安全提示',
+            recommendation: '请检查设备状态',
+          );
       final timestamp = occurredAt ?? _clock();
       final record = WarningRecord(
         id: '$code-${timestamp.microsecondsSinceEpoch}-${_sequence++}',
@@ -99,9 +112,9 @@ class WarningHistoryService {
   }) {
     final index = _indexOf(id);
     final record = _records[index];
-    final conditionStillActive = reevaluated.activeWarningCodes.contains(
-      record.code,
-    );
+    final conditionStillActive = _activeCodes(
+      reevaluated,
+    ).contains(record.code);
     final resetStillRequired =
         record.code == 'WARN-004' && reevaluated.requireReset;
     if (conditionStillActive || resetStillRequired) {
@@ -112,11 +125,19 @@ class WarningHistoryService {
       handleStatus: WarningHandleStatus.resolved,
       resolvedAt: resolvedAt ?? _clock(),
     );
-    _activeRecordIdsByCode.remove(record.code);
+    if (_activeRecordIdsByCode[record.code] == id) {
+      _activeRecordIdsByCode.remove(record.code);
+    }
     return true;
   }
 
   WarningRecord recordById(String id) => _recordById(id);
+
+  Set<String> _activeCodes(WarningResult result) => {
+    ...result.activeWarningCodes,
+    if (result.hasWarning && result.activeWarningCodes.isEmpty)
+      result.primaryWarningCode ?? 'customWarning',
+  };
 
   int _indexOf(String id) {
     final index = _records.indexWhere((record) => record.id == id);

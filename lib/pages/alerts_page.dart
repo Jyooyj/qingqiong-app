@@ -133,47 +133,65 @@ class _AlertsPageState extends State<AlertsPage>
       body: SafeArea(
         child: LayoutBuilder(
           builder: (context, constraints) {
-            final isDesktop = constraints.maxWidth >= 760;
             final listView = Expanded(
-              child: ListView.separated(
+              child: ListView.builder(
                 padding: const EdgeInsets.all(12),
-                itemCount: activeAlerts.length,
-                separatorBuilder: (_, _) => const SizedBox(height: 12),
+                itemCount: activeAlerts.isEmpty || selectedAlert == null
+                    ? activeAlerts.length + 1
+                    : activeAlerts.length,
                 itemBuilder: (context, index) {
-                  final alert = activeAlerts[index];
-                  final isSelected =
-                      selectedAlert?.selectionKey == alert.selectionKey;
-                  return AlertListCard(
-                    alert: alert,
-                    selected: isSelected,
-                    onViewDetail: () {
-                      widget.onViewDetail?.call(alert);
-                      setState(() => _selectedAlertKey = alert.selectionKey);
-                    },
-                  );
-                },
-              ),
-            );
-
-            final detailView = Expanded(
-              child: Padding(
-                padding: const EdgeInsets.all(12),
-                child: selectedAlert == null
-                    ? const Center(
+                  if (activeAlerts.isEmpty) {
+                    return const Padding(
+                      padding: EdgeInsets.only(top: 24),
+                      child: Center(child: Text('暂无告警')),
+                    );
+                  }
+                  if (index >= activeAlerts.length) {
+                    return const Padding(
+                      padding: EdgeInsets.only(top: 8),
+                      child: Center(
                         child: Text(
                           '选择一条告警查看详情',
                           style: TextStyle(color: Colors.grey),
                         ),
-                      )
-                    : AlertDetailPanel(
-                        alert: selectedAlert,
-                        onHandle: widget.onHandle == null
-                            ? null
-                            : () => widget.onHandle!(selectedAlert),
-                        onResumeRequest: widget.onResumeRequest == null
-                            ? null
-                            : () => widget.onResumeRequest!(selectedAlert),
                       ),
+                    );
+                  }
+                  final alert = activeAlerts[index];
+                  final isSelected =
+                      selectedAlert?.selectionKey == alert.selectionKey;
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        AlertListCard(
+                          alert: alert,
+                          selected: isSelected,
+                          onViewDetail: () {
+                            widget.onViewDetail?.call(alert);
+                            setState(
+                              () => _selectedAlertKey = alert.selectionKey,
+                            );
+                          },
+                        ),
+                        if (isSelected)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 8),
+                            child: AlertDetailPanel(
+                              alert: alert,
+                              onHandle: widget.onHandle == null
+                                  ? null
+                                  : () => widget.onHandle!(alert),
+                              onResumeRequest: widget.onResumeRequest == null
+                                  ? null
+                                  : () => widget.onResumeRequest!(alert),
+                            ),
+                          ),
+                      ],
+                    ),
+                  );
+                },
               ),
             );
 
@@ -185,60 +203,7 @@ class _AlertsPageState extends State<AlertsPage>
                   child: tabBar,
                 ),
                 const SizedBox(height: 12),
-                Expanded(
-                  child: isDesktop
-                      ? Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [listView, detailView],
-                        )
-                      : Column(
-                          children: [
-                            Expanded(
-                              child: ListView.separated(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                ),
-                                itemCount: activeAlerts.length,
-                                separatorBuilder: (_, _) =>
-                                    const SizedBox(height: 12),
-                                itemBuilder: (context, index) {
-                                  final alert = activeAlerts[index];
-                                  final isSelected =
-                                      selectedAlert?.selectionKey ==
-                                      alert.selectionKey;
-                                  return AlertListCard(
-                                    alert: alert,
-                                    selected: isSelected,
-                                    onViewDetail: () {
-                                      widget.onViewDetail?.call(alert);
-                                      setState(
-                                        () => _selectedAlertKey =
-                                            alert.selectionKey,
-                                      );
-                                    },
-                                  );
-                                },
-                              ),
-                            ),
-                            if (selectedAlert != null)
-                              SizedBox(
-                                height: 260,
-                                child: AlertDetailPanel(
-                                  alert: selectedAlert,
-                                  onHandle: widget.onHandle == null
-                                      ? null
-                                      : () => widget.onHandle!(selectedAlert),
-                                  onResumeRequest:
-                                      widget.onResumeRequest == null
-                                      ? null
-                                      : () => widget.onResumeRequest!(
-                                          selectedAlert,
-                                        ),
-                                ),
-                              ),
-                          ],
-                        ),
-                ),
+                listView,
               ],
             );
           },

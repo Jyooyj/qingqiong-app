@@ -238,7 +238,10 @@ void main() {
       expect(c.handleVoiceText('停止任务').success, isTrue);
       expect(adapter.isRunning, isFalse);
       expect(c.handleVoiceText('返回充电桩').success, isTrue);
-      expect(session.robotController.currentStatus.state, RobotState.charging);
+      expect(
+        session.robotController.currentStatus.state,
+        RobotState.returningToCharge,
+      );
     });
   });
 

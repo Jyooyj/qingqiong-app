@@ -72,7 +72,8 @@ class RobotController extends ChangeNotifier {
   bool get canStop =>
       (_status.state == RobotState.cleaning ||
           _status.state == RobotState.paused ||
-          _status.state == RobotState.charging) &&
+          _status.state == RobotState.charging ||
+          _status.state == RobotState.returningToCharge) &&
       warningResult.canStop;
   bool get canCharge =>
       _status.state == RobotState.idle && warningResult.canCharge;
@@ -141,7 +142,7 @@ class RobotController extends ChangeNotifier {
     return _accepted(RobotAction.stop, '任务已停止，进度已重置');
   }
 
-  ControlResult charge() {
+  ControlResult charge({bool travelRequired = false}) {
     if (!canCharge) {
       return _rejected(
         RobotAction.charge,
@@ -151,8 +152,37 @@ class RobotController extends ChangeNotifier {
       );
     }
     _stopProgress();
-    _updateStatus(_status.copyWith(state: RobotState.charging, progress: 0));
+    _updateStatus(
+      _status.copyWith(
+        state: travelRequired
+            ? RobotState.returningToCharge
+            : RobotState.charging,
+        progress: 0,
+      ),
+    );
+    if (!travelRequired) _startCharging();
     return _accepted(RobotAction.charge, '机器人正在返回充电');
+  }
+
+  void arriveAtChargingStation() {
+    if (_status.state != RobotState.returningToCharge) return;
+    _updateStatus(_status.copyWith(state: RobotState.charging));
+    _startCharging();
+  }
+
+  void _startCharging() {
+    _stopProgress();
+    _progressTimer = Timer.periodic(progressInterval, (_) {
+      if (_status.state != RobotState.charging) return;
+      final battery = (_status.battery + 2).clamp(0, 100);
+      if (battery == 100) _stopProgress();
+      _updateStatus(
+        _status.copyWith(
+          battery: battery,
+          state: battery == 100 ? RobotState.idle : RobotState.charging,
+        ),
+      );
+    });
   }
 
   ControlResult emergencyStop() {

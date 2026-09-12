@@ -8,6 +8,9 @@ import 'package:latlong2/latlong.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'campus_geo_map_fallback.dart';
 import 'geo_map_view_data.dart';
+import '../../data/campus_geo/campus_buildings.dart';
+import '../../models/campus_geo/campus_building.dart';
+import '../../theme/app_design.dart';
 export 'geo_map_view_data.dart';
 
 /// Controlled geographic display. No task, voice, or safety dependencies.
@@ -16,9 +19,11 @@ class CampusGeoMapView extends StatefulWidget {
   const CampusGeoMapView({
     super.key,
     required this.zones,
+    this.campusBuildings = CampusBuildings.all,
     this.selectedZoneId,
     this.robotPosition,
     this.plannedPath = const [],
+    this.routeLabel = '规划路线',
     this.cleanedPath = const [],
     this.obstacles = const [],
     this.chargingStation,
@@ -26,6 +31,8 @@ class CampusGeoMapView extends StatefulWidget {
     this.initialCenter = campusCenter,
     this.initialZoom = 16,
     this.enableCoordinatePicker = false,
+    this.showCoordinatePickerDetails = true,
+    this.showCampusLabels = true,
     this.onCoordinatePicked,
     this.onFallback,
     this.tileProviderFactory,
@@ -34,15 +41,22 @@ class CampusGeoMapView extends StatefulWidget {
   // Approximate campus overview only; not a surveyed robot location.
   static const campusCenter = LatLng(30.88469, 121.89265);
   final List<CampusGeoZoneView> zones;
+
+  /// Permanent wayfinding labels. Callers may provide a scoped list; the
+  /// default is the trusted campus overview list.
+  final List<CampusBuilding> campusBuildings;
   final String? selectedZoneId;
   final LatLng? robotPosition;
   final List<LatLng> plannedPath, cleanedPath;
+  final String routeLabel;
   final List<CampusGeoMarkerView> obstacles;
   final CampusGeoMarkerView? chargingStation;
   final ValueChanged<String>? onZoneTap;
   final LatLng initialCenter;
   final double initialZoom;
   final bool enableCoordinatePicker;
+  final bool showCoordinatePickerDetails;
+  final bool showCampusLabels;
   final ValueChanged<LatLng>? onCoordinatePicked;
   final VoidCallback? onFallback;
 
@@ -72,6 +86,69 @@ class _CampusGeoMapViewState extends State<CampusGeoMapView> {
             z.polygon.every(validGeoPoint),
       )
       .toList();
+
+  List<CampusBuilding> get _labelBuildings {
+    if (widget.campusBuildings.isNotEmpty) {
+      return widget.campusBuildings
+          .where(
+            (b) =>
+                b.latitude != null &&
+                b.longitude != null &&
+                validGeoPoint(LatLng(b.latitude!, b.longitude!)),
+          )
+          .toList();
+    }
+    // Compatibility for small embedders/tests that only provide zones.
+    return _zones
+        .map(
+          (zone) => CampusBuilding(
+            id: zone.id,
+            zoneId: zone.id,
+            name: zone.name,
+            latitude: zone.center.latitude,
+            longitude: zone.center.longitude,
+            labelOffset: _legacyLabelOffset(zone.id),
+          ),
+        )
+        .toList();
+  }
+
+  CampusLabelOffset _legacyLabelOffset(String id) => switch (id) {
+    'lab_building' || 'teaching_2' => const CampusLabelOffset(dy: -18),
+    'canteen_1' => const CampusLabelOffset(dx: 28, dy: -18),
+    'dormitory' => const CampusLabelOffset(dy: 18),
+    'library' => const CampusLabelOffset(dx: -28, dy: -18),
+    'teaching_1' => const CampusLabelOffset(dx: 28, dy: 18),
+    _ => const CampusLabelOffset(),
+  };
+
+  IconData _buildingIcon(CampusBuilding building) {
+    final id = building.zoneId ?? building.id;
+    if (id.contains('teaching') ||
+        id.contains('school') ||
+        id.contains('college')) {
+      return Icons.school_outlined;
+    }
+    if (id.contains('canteen')) return Icons.restaurant_outlined;
+    if (id.contains('library')) return Icons.local_library_outlined;
+    if (id.contains('dorm')) return Icons.home_outlined;
+    if (id.contains('lab')) return Icons.science_outlined;
+    return Icons.location_city_outlined;
+  }
+
+  bool _isBuildingSelected(CampusBuilding building) =>
+      widget.selectedZoneId != null &&
+      (building.zoneId == widget.selectedZoneId ||
+          building.id == widget.selectedZoneId);
+
+  double _labelWidth(CampusBuilding building) =>
+      math.max(104.0, building.name.runes.length * 11.0 + 29);
+
+  Alignment _labelAlignment(CampusLabelOffset offset, double width) =>
+      Alignment(
+        (-2 * offset.dx / width).clamp(-1.0, 1.0),
+        (2 * offset.dy / 24).clamp(-1.0, 1.0),
+      );
 
   @override
   void initState() {
@@ -105,6 +182,11 @@ class _CampusGeoMapViewState extends State<CampusGeoMapView> {
         .firstOrNull;
     if (selected != null) _controller.move(selected.center, 17);
   });
+
+  // Keep labels close to their zone center while spreading the nearby labels
+  // enough that the six campus points remain legible at the overview zoom.
+  // The geographic anchor is still the zone center; alignment only changes
+  // where the label box is drawn around that anchor.
   bool _visibleTile(TileImage tile) {
     if (!_ready) return false;
     final c = tile.coordinates;
@@ -237,14 +319,14 @@ class _CampusGeoMapViewState extends State<CampusGeoMapView> {
                         _refreshTileStatus();
                       },
                       onTap: (_, point) {
-                        final hit = _hits.value?.hitValues.firstOrNull;
-                        if (hit != null) {
-                          widget.onZoneTap?.call(hit);
-                          return;
-                        }
                         if (_picker) {
                           setState(() => _picked = point);
                           widget.onCoordinatePicked?.call(point);
+                          return;
+                        }
+                        final hit = _hits.value?.hitValues.firstOrNull;
+                        if (hit != null) {
+                          widget.onZoneTap?.call(hit);
                         }
                       },
                     ),
@@ -292,6 +374,106 @@ class _CampusGeoMapViewState extends State<CampusGeoMapView> {
                             ),
                         ],
                       ),
+                      // The base campus label layer is always rendered from
+                      // the supplied zones, independently of task overlays.
+                      MarkerLayer(
+                        key: const Key('geo-campus-label-layer'),
+                        markers: [
+                          if (widget.showCampusLabels)
+                            for (final building in _labelBuildings)
+                              Marker(
+                                key: Key('geo-building-marker-${building.id}'),
+                                point: LatLng(
+                                  building.latitude!,
+                                  building.longitude!,
+                                ),
+                                width: _labelWidth(building),
+                                height: 24,
+                                alignment: _labelAlignment(
+                                  building.labelOffset,
+                                  _labelWidth(building),
+                                ),
+                                child: Semantics(
+                                  button: true,
+                                  selected: _isBuildingSelected(building),
+                                  child: GestureDetector(
+                                    key: Key('geo-zone-${building.id}'),
+                                    onTap: () => widget.onZoneTap?.call(
+                                      building.zoneId ?? building.id,
+                                    ),
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 6,
+                                        vertical: 3,
+                                      ),
+                                      alignment: Alignment.center,
+                                      decoration: BoxDecoration(
+                                        color: _isBuildingSelected(building)
+                                            ? AppDesign.primarySoft
+                                            : Colors.white.withValues(
+                                                alpha: .9,
+                                              ),
+                                        border: Border.all(
+                                          color: _isBuildingSelected(building)
+                                              ? AppDesign.primary
+                                              : const Color(0x80D9E0E4),
+                                        ),
+                                        borderRadius: BorderRadius.circular(8),
+                                        boxShadow: const [
+                                          BoxShadow(
+                                            color: Color(0x0C000000),
+                                            blurRadius: 2,
+                                            offset: Offset(0, 1),
+                                          ),
+                                        ],
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: [
+                                          Padding(
+                                            padding: const EdgeInsets.only(
+                                              right: 3,
+                                            ),
+                                            child: Icon(
+                                              _buildingIcon(building),
+                                              size: 12,
+                                              color:
+                                                  _isBuildingSelected(building)
+                                                  ? AppDesign.primary
+                                                  : AppDesign.textSecondary,
+                                            ),
+                                          ),
+                                          Flexible(
+                                            child: Text(
+                                              building.name,
+                                              softWrap: false,
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: TextStyle(
+                                                fontSize: 11,
+                                                height: 1.2,
+                                                fontWeight: FontWeight.w600,
+                                                color:
+                                                    _isBuildingSelected(
+                                                      building,
+                                                    )
+                                                    ? AppDesign.primary
+                                                    : AppDesign.text,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                        ],
+                      ),
+                      // Routes are drawn above permanent labels while all
+                      // dynamic markers remain above both layers.
                       IgnorePointer(
                         child: PolylineLayer(
                           polylines: [
@@ -313,42 +495,12 @@ class _CampusGeoMapViewState extends State<CampusGeoMapView> {
                           ],
                         ),
                       ),
+                      // Dynamic markers remain a separate layer so warnings,
+                      // the robot and charging station never control whether
+                      // the permanent campus labels are visible.
                       MarkerLayer(
+                        key: const Key('geo-dynamic-marker-layer'),
                         markers: [
-                          for (final zone in zones)
-                            Marker(
-                              point: zone.center,
-                              width: 92,
-                              height: 32,
-                              child: Semantics(
-                                button: true,
-                                selected: zone.id == widget.selectedZoneId,
-                                child: GestureDetector(
-                                  key: Key('geo-zone-${zone.id}'),
-                                  onTap: () => widget.onZoneTap?.call(zone.id),
-                                  child: Container(
-                                    alignment: Alignment.center,
-                                    decoration: BoxDecoration(
-                                      color: zone.id == widget.selectedZoneId
-                                          ? const Color(0xff087d62)
-                                          : Colors.white,
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    child: Text(
-                                      zone.name,
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        color: zone.id == widget.selectedZoneId
-                                            ? Colors.white
-                                            : Colors.black87,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
                           if (charger != null &&
                               validGeoPoint(charger.position) &&
                               !coLocated)
@@ -433,8 +585,8 @@ class _CampusGeoMapViewState extends State<CampusGeoMapView> {
                               _picked!,
                               'geo-picked',
                               Icons.location_on,
-                              Colors.purple,
-                              '拾取坐标',
+                              Colors.blue,
+                              '\u6821\u51c6\u70b9',
                             ),
                         ],
                       ),
@@ -498,17 +650,19 @@ class _CampusGeoMapViewState extends State<CampusGeoMapView> {
           ),
         ),
         const SizedBox(height: 10),
-        const Wrap(
+        Wrap(
           spacing: 14,
           runSpacing: 6,
           children: [
-            Text('┄ 规划路线', style: TextStyle(color: Colors.blue)),
-            Text('━ 已清扫轨迹', style: TextStyle(color: Color(0xff07835e))),
-            Text('▲ 障碍', style: TextStyle(color: Colors.deepOrange)),
-            Text('机器人位置由外部数据提供', style: TextStyle(fontSize: 12)),
+            Text(
+              '┄ ${widget.routeLabel}',
+              style: const TextStyle(color: Colors.blue),
+            ),
+            const Text('━ 已清扫轨迹', style: TextStyle(color: Color(0xff07835e))),
+            const Text('▲ 障碍', style: TextStyle(color: Colors.deepOrange)),
           ],
         ),
-        if (_picker)
+        if (_picker && widget.showCoordinatePickerDetails)
           Padding(
             padding: const EdgeInsets.only(top: 12),
             child: Card(

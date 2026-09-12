@@ -4,12 +4,12 @@ import '../../adapters/location/location_adapter.dart';
 import '../../data/campus/campus_map_data.dart';
 import '../../models/campus/campus_map_state.dart';
 import '../../models/campus/campus_point.dart';
+
 class CampusLocationService {
-  CampusLocationService({
-    required this._locationAdapter,
-  }) {
-    _positionSubscription =
-        _locationAdapter.watchRobotPosition().listen(_handlePositionUpdate);
+  CampusLocationService({required this._locationAdapter}) {
+    _positionSubscription = _locationAdapter.watchRobotPosition().listen(
+      _handlePositionUpdate,
+    );
   }
 
   final LocationAdapter _locationAdapter;
@@ -88,11 +88,9 @@ class CampusLocationService {
   }
 
   void _handlePositionUpdate(CampusPoint position) {
-    final updatedCleanedPath =
-        List<CampusPoint>.from(_state.cleanedPath);
+    final updatedCleanedPath = List<CampusPoint>.from(_state.cleanedPath);
 
-    if (updatedCleanedPath.isEmpty ||
-        updatedCleanedPath.last != position) {
+    if (updatedCleanedPath.isEmpty || updatedCleanedPath.last != position) {
       updatedCleanedPath.add(position);
     }
 

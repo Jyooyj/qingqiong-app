@@ -295,4 +295,30 @@ void main() {
       expect(find.text('Pending Task'), findsWidgets);
     },
   );
+  testWidgets('filter labels keep their natural width on phone sizes', (
+    tester,
+  ) async {
+    for (final size in [
+      const Size(360, 800),
+      const Size(390, 844),
+      const Size(430, 932),
+    ]) {
+      await tester.binding.setSurfaceSize(size);
+      await tester.pumpWidget(const MaterialApp(home: TasksPage()));
+      await tester.pumpAndSettle();
+      for (final label in [
+        '\u5168\u90e8',
+        '\u5f85\u6267\u884c',
+        '\u6267\u884c\u4e2d',
+        '\u5df2\u6682\u505c',
+        '\u5df2\u505c\u6b62',
+        '\u5df2\u5b8c\u6210',
+        '\u5931\u8d25',
+      ]) {
+        expect(find.text(label), findsWidgets);
+      }
+      expect(tester.takeException(), isNull);
+    }
+    await tester.binding.setSurfaceSize(null);
+  });
 }

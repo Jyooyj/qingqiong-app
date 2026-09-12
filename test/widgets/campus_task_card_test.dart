@@ -27,8 +27,8 @@ void main() {
       ),
     );
     expect(find.text('42%'), findsOneWidget);
-    expect(find.text('12.5 m²'), findsOneWidget);
-    expect(find.text('01:30'), findsOneWidget);
+    expect(find.text('13 m²'), findsOneWidget);
+    expect(find.text('1 分 30 秒'), findsOneWidget);
     expect(find.text('80%'), findsOneWidget);
     await tester.tap(find.byKey(const Key('campus-pause')));
     await tester.pump();

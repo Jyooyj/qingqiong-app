@@ -2,9 +2,7 @@ import '../../controllers/robot_controller.dart';
 import 'robot_device_adapter.dart';
 
 class DemoRobotAdapter implements RobotDeviceAdapter {
-  DemoRobotAdapter({
-    required this.robotController,
-  });
+  DemoRobotAdapter({required this.robotController});
 
   final RobotController robotController;
 

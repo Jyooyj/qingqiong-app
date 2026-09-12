@@ -4,6 +4,7 @@ import 'package:robot_cleaner/pages/map_page.dart';
 import 'package:robot_cleaner/widgets/geo_map/campus_geo_preview_page.dart';
 import 'package:robot_cleaner/widgets/geo_map/campus_geo_map_view.dart';
 import 'package:robot_cleaner/services/product_session.dart';
+import 'package:robot_cleaner/data/campus_geo/campus_buildings.dart';
 
 void main() {
   testWidgets('geo page follows shared voice task and pause state', (
@@ -50,6 +51,22 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(CampusGeoPreviewPage), findsNothing);
     expect(find.text('查看校园地图'), findsOneWidget);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  testWidgets('normal campus map keeps labels without calibration UI', (
+    tester,
+  ) async {
+    await tester.pumpWidget(const MaterialApp(home: CampusGeoPreviewPage()));
+    expect(find.byKey(const Key('poi-calibration-controls')), findsNothing);
+    expect(find.byKey(const Key('poi-calibration-building')), findsNothing);
+    expect(find.byKey(const Key('poi-calibration-result')), findsNothing);
+    expect(find.text('隐藏现有建筑标签'), findsNothing);
+    final map = tester.widget<CampusGeoMapView>(find.byType(CampusGeoMapView));
+    expect(map.enableCoordinatePicker, isFalse);
+    expect(map.onCoordinatePicked, isNull);
+    expect(map.showCampusLabels, isTrue);
+    expect(map.campusBuildings, same(CampusBuildings.all));
     await tester.pumpWidget(const SizedBox.shrink());
   });
 }

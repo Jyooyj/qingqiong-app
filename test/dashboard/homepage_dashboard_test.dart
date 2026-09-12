@@ -73,14 +73,14 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('demo-fault-panel')));
     await tester.pumpAndSettle();
-    await tester.ensureVisible(find.byKey(const Key('fault-低电量')));
+    await tester.ensureVisible(find.byKey(const Key('fault-严重低电量')));
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('fault-低电量')));
+    await tester.tap(find.byKey(const Key('fault-严重低电量')));
     await tester.pump();
 
-    // Severity mapping 'high' -> '高' and occurred time '刚刚' should be visible
-    expect(find.text('高'), findsWidgets);
-    expect(find.text('刚刚'), findsWidgets);
+    // The compact summary shows severity and the record's formatted time.
+    expect(find.textContaining('高 · '), findsWidgets);
+    expect(find.textContaining(RegExp(r'高 · \d{2}:\d{2} · 待处理')), findsWidgets);
 
     // Now verify desktop viewport also has exactly one area-selector
     tester.view.physicalSize = const Size(1366, 768);

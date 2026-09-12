@@ -48,8 +48,8 @@ void main() {
     // Tap 地图
     await tester.tap(find.byIcon(Icons.map).first);
     await tester.pumpAndSettle();
-    expect(find.text('地图 / 轨迹'), findsOneWidget);
-    expect(find.text('A区'), findsWidgets);
+    expect(find.text('上海海洋大学 · 校园智能清扫地图'), findsOneWidget);
+    expect(find.text('第一食堂'), findsWidgets);
     expect(tester.takeException(), isNull);
 
     // Tap 告警

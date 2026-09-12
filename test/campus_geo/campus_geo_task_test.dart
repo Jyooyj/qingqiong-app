@@ -69,9 +69,7 @@ void main() {
     expect(() => coordinator.geoCleanedPath.clear(), throwsUnsupportedError);
   });
 
-  geoTest('display progress follows route without updating task progress', (
-    tester,
-  ) async {
+  geoTest('task progress follows the same geo route', (tester) async {
     expect(coordinator.geoProgress, 0.0);
     coordinator.selectZone('lab_building');
     expect(coordinator.geoProgress, 0.0);
@@ -79,11 +77,10 @@ void main() {
     expect(coordinator.geoProgress, 0.0);
     await tester.pump();
     expect(coordinator.geoProgress, 0.0);
-    final taskProgress = session.currentTask!.progress;
     for (var i = 1; i < 4; i++) {
       await tester.pump(interval);
       expect(coordinator.geoProgress, i / 4);
-      expect(session.currentTask!.progress, taskProgress);
+      expect(session.currentTask!.progress, i * 25);
       expect(session.currentTask!.status, CleaningTaskStatus.running);
     }
     await tester.pump(interval);

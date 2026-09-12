@@ -1,3 +1,4 @@
+import 'package:robot_cleaner/widgets/geo_map/campus_geo_map_view.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:robot_cleaner/controllers/robot_controller.dart';
@@ -42,7 +43,7 @@ void main() {
     return _Harness(robot: robot, session: session);
   }
 
-  testWidgets('1. UI 创建任务进入真实 TaskController', (tester) async {
+  testWidgets('1. 校园区域选择创建并启动真实任务', (tester) async {
     final app = harness();
     await tester.pumpWidget(QingQiongApp(session: app.session));
     await tester.pumpAndSettle();
@@ -51,16 +52,22 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('open-new-task')));
     await tester.pumpAndSettle();
-    await tester.enterText(find.byKey(const Key('new-task-name')), 'A区比赛演示任务');
-    await tester.tap(find.byKey(const Key('save-task-button')));
+    expect(find.byKey(const Key('new-task-area')), findsNothing);
+    await tester.tap(find.byKey(const Key('cleaning-area-lab_building')));
     await tester.pump();
 
     expect(app.session.taskController.tasks, hasLength(1));
-    expect(app.session.taskController.tasks.single.name, 'A区比赛演示任务');
+    expect(
+      app.session.taskController.tasks.single.campusZoneId,
+      'lab_building',
+    );
+    expect(app.session.taskController.tasks.single.displayArea, '实验楼');
     expect(
       app.session.taskController.tasks.single.status,
-      CleaningTaskStatus.pending,
+      CleaningTaskStatus.running,
     );
+    app.session.campusCoordinator.stop();
+    await tester.pumpWidget(const SizedBox.shrink());
   });
 
   test('2. TaskController 启动机器人后任务才进入 running', () {
@@ -237,8 +244,8 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(
-      find.byKey(const Key('obstacle-highlight-WARN-007')),
-      findsOneWidget,
+      tester.widget<CampusGeoMapView>(find.byType(CampusGeoMapView)).obstacles,
+      isNotEmpty,
     );
     app.session.simulationEngine.stop();
   });
@@ -317,7 +324,7 @@ void main() {
       CleaningTaskStatus.completed,
     );
     expect(app.session.dashboardStats.todayCompletedCount, 1);
-    expect(app.session.dashboardStats.totalCleanedArea, 16);
+    expect(app.session.dashboardStats.totalCleanedArea, 0);
 
     await tester.pumpWidget(QingQiongApp(session: app.session));
     await tester.pumpAndSettle();

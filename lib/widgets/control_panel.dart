@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../theme/app_design.dart';
 
 class ControlPanel extends StatelessWidget {
   const ControlPanel({
@@ -26,7 +27,7 @@ class ControlPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       key: const Key('control-panel'),
-      elevation: 1,
+      elevation: 0,
       margin: EdgeInsets.zero,
       child: Padding(
         padding: const EdgeInsets.all(14),
@@ -54,6 +55,8 @@ class ControlPanel extends StatelessWidget {
                       label: '开始清扫',
                       icon: Icons.play_arrow_rounded,
                       onPressed: onStart,
+                      backgroundColor: AppDesign.primarySoft,
+                      foregroundColor: AppDesign.primary,
                     ),
                     _ControlButton(
                       width: width,
@@ -61,6 +64,8 @@ class ControlPanel extends StatelessWidget {
                       label: '暂停',
                       icon: Icons.pause_rounded,
                       onPressed: onPause,
+                      backgroundColor: AppDesign.primarySoft,
+                      foregroundColor: AppDesign.primary,
                     ),
                     _ControlButton(
                       width: width,
@@ -68,6 +73,8 @@ class ControlPanel extends StatelessWidget {
                       label: '继续',
                       icon: Icons.play_circle_outline,
                       onPressed: onResume,
+                      backgroundColor: AppDesign.primarySoft,
+                      foregroundColor: AppDesign.primary,
                     ),
                     _ControlButton(
                       width: width,
@@ -75,6 +82,8 @@ class ControlPanel extends StatelessWidget {
                       label: '停止',
                       icon: Icons.stop_rounded,
                       onPressed: onStop,
+                      backgroundColor: AppDesign.primarySoft,
+                      foregroundColor: AppDesign.primary,
                     ),
                     _ControlButton(
                       width: width,
@@ -82,6 +91,8 @@ class ControlPanel extends StatelessWidget {
                       label: '返回充电',
                       icon: Icons.battery_charging_full,
                       onPressed: onCharge,
+                      backgroundColor: AppDesign.primarySoft,
+                      foregroundColor: AppDesign.primary,
                     ),
                     _ControlButton(
                       width: width,
@@ -89,6 +100,8 @@ class ControlPanel extends StatelessWidget {
                       label: '复位',
                       icon: Icons.restart_alt_rounded,
                       onPressed: onReset,
+                      backgroundColor: AppDesign.primarySoft,
+                      foregroundColor: AppDesign.primary,
                     ),
                     _ControlButton(
                       width: constraints.maxWidth,
@@ -96,7 +109,7 @@ class ControlPanel extends StatelessWidget {
                       label: '紧急停止',
                       icon: Icons.warning_amber_rounded,
                       onPressed: onEmergency,
-                      backgroundColor: Colors.red.shade700,
+                      backgroundColor: AppDesign.danger,
                       foregroundColor: Colors.white,
                     ),
                     _ControlButton(
@@ -105,7 +118,7 @@ class ControlPanel extends StatelessWidget {
                       label: '语音控制',
                       icon: Icons.mic_rounded,
                       onPressed: onVoice,
-                      backgroundColor: Colors.green.shade700,
+                      backgroundColor: AppDesign.success,
                       foregroundColor: Colors.white,
                     ),
                   ],

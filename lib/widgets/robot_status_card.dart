@@ -3,9 +3,10 @@ import 'package:flutter/material.dart';
 import '../models/robot_status.dart';
 
 class RobotStatusCard extends StatelessWidget {
-  const RobotStatusCard({super.key, required this.status});
+  const RobotStatusCard({super.key, required this.status, this.displayArea});
 
   final RobotStatus status;
+  final String? displayArea;
 
   Color _statusColor(BuildContext context) {
     switch (status.state) {
@@ -13,6 +14,7 @@ class RobotStatusCard extends StatelessWidget {
         return Colors.green.shade700;
       case RobotState.paused:
         return Colors.orange.shade800;
+      case RobotState.returningToCharge:
       case RobotState.charging:
         return Colors.blue.shade700;
       case RobotState.emergency:
@@ -114,7 +116,7 @@ class RobotStatusCard extends StatelessWidget {
                       width: itemWidth,
                       icon: Icons.location_on_outlined,
                       label: '当前区域',
-                      value: status.area,
+                      value: displayArea ?? status.area,
                     ),
                     _InfoItem(
                       width: itemWidth,
