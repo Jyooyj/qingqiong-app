@@ -61,3 +61,14 @@ class TaskViewData {
     this.displayTaskName,
   });
 }
+
+/// Presentation only; raw status values remain unchanged for task actions.
+String taskStatusLabel(String status) => switch (status) {
+  'pending' => '待执行',
+  'running' => '执行中',
+  'paused' => '已暂停',
+  'completed' => '已完成',
+  'cancelled' => '已停止',
+  'failed' => '失败',
+  _ => '未知状态',
+};

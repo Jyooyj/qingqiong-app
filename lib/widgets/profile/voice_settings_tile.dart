@@ -14,11 +14,8 @@ class VoiceSettingsTile extends StatelessWidget {
       key: const Key('profile-voice-settings'),
       child: ListTile(
         leading: const Icon(Icons.mic_rounded),
-        title: const Text('语音设置'),
-        subtitle: Text(
-          '文本指令：$statusText\n麦克风语音：待接入',
-          style: theme.textTheme.bodyMedium,
-        ),
+        title: const Text('交互模式'),
+        subtitle: Text('自然语言指令 · 文字输入', style: theme.textTheme.bodyMedium),
         trailing: const Icon(Icons.chevron_right_rounded),
         onTap: onTap,
       ),

@@ -4,6 +4,7 @@ import "package:latlong2/latlong.dart";
 
 import 'package:flutter/material.dart';
 import 'campus_geo_map_view.dart';
+import '../tasks/task_view_data.dart';
 import '../../data/campus_geo/campus_geo_map_data.dart';
 import '../../data/campus_geo/campus_buildings.dart';
 import '../../models/campus_geo/campus_geo_point.dart';
@@ -166,9 +167,47 @@ class _CampusGeoPreviewPageState extends State<CampusGeoPreviewPage> {
                     onZoneTap: _select,
                   ),
                   const SizedBox(height: 12),
+                  Card(
+                    key: const Key('geo-task-status-card'),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Text(
+                            _coordinator.currentTask?.name ?? '暂无清扫任务',
+                            style: Theme.of(context).textTheme.titleMedium,
+                          ),
+                          const SizedBox(height: 8),
+                          Wrap(
+                            spacing: 16,
+                            runSpacing: 6,
+                            children: [
+                              Text('地点：${zone?.name ?? "未选择"}'),
+                              Text(
+                                _coordinator.currentTask == null
+                                    ? '待机'
+                                    : taskStatusLabel(
+                                        _coordinator.currentTask!.status.name,
+                                      ),
+                              ),
+                              Text(
+                                '${(_coordinator.geoProgress * 100).round()}%',
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          LinearProgressIndicator(
+                            key: const Key('geo-task-progress'),
+                            value: _coordinator.geoProgress.clamp(0.0, 1.0),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
                   SwitchListTile(
                     contentPadding: EdgeInsets.zero,
-                    title: const Text('显示临时障碍'),
+                    title: const Text('模拟路径阻塞'),
                     value: _obstacle,
                     onChanged: _coordinator.setDemoPathBlocked,
                   ),

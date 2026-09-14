@@ -36,7 +36,9 @@ class TaskCard extends StatelessWidget {
                       style: Theme.of(context).textTheme.titleMedium,
                     ),
                     const SizedBox(height: 6),
-                    Row(
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 6,
                       children: [
                         Text(
                           task.presentationArea,
@@ -64,7 +66,7 @@ class TaskCard extends StatelessWidget {
                             ),
                           ),
                         ),
-                        const Spacer(),
+                        Text('模式：${task.mode}'),
                         Text(task.timeText, key: Key('task-time-${task.id}')),
                       ],
                     ),

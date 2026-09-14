@@ -1,3 +1,4 @@
+import 'package:robot_cleaner/widgets/voice_control_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:robot_cleaner/main.dart';
@@ -27,7 +28,7 @@ void main() {
         if (clearMethod == 'map') {
           await tester.tap(find.byIcon(Icons.map).first);
           await tester.pump();
-          final toggle = find.widgetWithText(SwitchListTile, '显示临时障碍');
+          final toggle = find.widgetWithText(SwitchListTile, '模拟路径阻塞');
           await tester.ensureVisible(toggle);
           await tester.pumpAndSettle();
           await tester.tap(toggle);
@@ -194,7 +195,13 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(voice);
       await tester.pumpAndSettle();
-      expect(find.text('自然语言控制'), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byType(VoiceControlSheet),
+          matching: find.text('自然语言控制'),
+        ),
+        findsOneWidget,
+      );
       expect(find.text('开始清扫A区'), findsNothing);
       expect(tester.takeException(), isNull);
       await tester.pumpWidget(const SizedBox.shrink());

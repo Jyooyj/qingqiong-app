@@ -99,7 +99,7 @@ class AlertDetailPanel extends StatelessWidget {
               if (onHandle == null || onResumeRequest == null) ...[
                 const SizedBox(height: 10),
                 Text(
-                  '等待Safety接入：处理与恢复动作暂未接入，按钮已禁用。',
+                  '当前告警暂不支持在此操作，请检查设备状态。',
                   style: TextStyle(color: Colors.grey.shade700, fontSize: 12),
                 ),
               ],

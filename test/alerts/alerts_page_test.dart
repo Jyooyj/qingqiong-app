@@ -155,7 +155,7 @@ void main() {
     await tester.tap(find.text('WARN-007').at(0));
     await tester.pumpAndSettle();
 
-    expect(find.text('等待Safety接入：处理与恢复动作暂未接入，按钮已禁用。'), findsOneWidget);
+    expect(find.text('当前告警暂不支持在此操作，请检查设备状态。'), findsOneWidget);
     expect(
       tester.widget<FilledButton>(find.byType(FilledButton)).onPressed,
       isNull,

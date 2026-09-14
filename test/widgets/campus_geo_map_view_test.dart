@@ -282,7 +282,7 @@ void main() {
     tiles.errorTileCallback!(tile, Exception('offline'), StackTrace.current);
     await settle(tester);
     expect(mapContext.mounted, isTrue);
-    expect(find.text('部分底图加载失败，已加载区域仍可使用。'), findsOneWidget);
+    expect(find.text('底图加载失败，请检查网络后重试'), findsOneWidget);
     expect(find.byKey(const Key('geo-robot')), findsOneWidget);
     await tester.tap(find.text('重试底图'));
     await settle(tester);

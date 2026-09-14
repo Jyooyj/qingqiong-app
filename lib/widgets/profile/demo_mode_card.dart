@@ -25,7 +25,7 @@ class DemoModeCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Demo Mode',
+                    '演示模式',
                     style: theme.textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.w800,
                     ),
@@ -49,6 +49,10 @@ class DemoModeCard extends StatelessWidget {
             ),
             Switch(
               key: const Key('profile-demo-mode-switch'),
+              activeTrackColor: theme.colorScheme.primary,
+              trackColor: WidgetStateProperty.resolveWith(
+                (states) => enabled ? theme.colorScheme.primary : null,
+              ),
               value: enabled,
               onChanged: onChanged,
             ),

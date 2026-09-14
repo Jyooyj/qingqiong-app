@@ -314,7 +314,7 @@ class _CampusGeoMapViewState extends State<CampusGeoMapView> {
                         _scheduleFocus();
                         _refreshTileStatus();
                       },
-                      onPositionChanged: (_, _) {
+                      onPositionChanged: (camera, _) {
                         _armTimeout();
                         _refreshTileStatus();
                       },
@@ -578,7 +578,7 @@ class _CampusGeoMapViewState extends State<CampusGeoMapView> {
                                     'geo-robot',
                                     Icons.smart_toy,
                                     const Color(0xff184b6b),
-                                    '机器人（外部位置）',
+                                    '机器人',
                                   ),
                           if (_picker && _picked != null)
                             _marker(
@@ -631,9 +631,7 @@ class _CampusGeoMapViewState extends State<CampusGeoMapView> {
                       left: 10,
                       right: 66,
                       child: CampusGeoMapFallback(
-                        message: _loaded
-                            ? '部分底图加载失败，已加载区域仍可使用。'
-                            : '当前视野底图暂不可用，请检查网络或重试。位置与路线图层仍保留。',
+                        message: '底图加载失败，请检查网络后重试',
                         onRetry: _retry,
                         onFallback: widget.onFallback,
                       ),

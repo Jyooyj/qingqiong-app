@@ -51,7 +51,7 @@ void main() {
           MaterialApp(home: CampusGeoPreviewPage(coordinator: coordinator)),
         );
         await tester.pump(const Duration(seconds: 10));
-        final toggle = find.widgetWithText(SwitchListTile, '显示临时障碍');
+        final toggle = find.widgetWithText(SwitchListTile, '模拟路径阻塞');
         await tester.ensureVisible(toggle);
         await tester.tap(toggle);
         await tester.pump();

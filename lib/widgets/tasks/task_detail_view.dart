@@ -34,7 +34,8 @@ class TaskDetailView extends StatelessWidget {
           children: [
             Text(task.name, style: Theme.of(context).textTheme.titleLarge),
             const SizedBox(height: 8),
-            Text('区域: ${task.presentationArea}'),
+            Text('地点: ${task.presentationArea}'),
+            Text('模式: ${task.mode}'),
             const SizedBox(height: 4),
             Text('状态: ${task.statusText}'),
             const SizedBox(height: 4),
@@ -102,7 +103,7 @@ class TaskDetailView extends StatelessWidget {
                 onResume == null &&
                 onStop == null) ...[
               const SizedBox(height: 8),
-              const Text('等待TaskController接入', key: Key('detail-waiting')),
+              const Text('当前任务操作不可用', key: Key('detail-waiting')),
             ],
           ],
         ),
