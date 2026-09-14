@@ -91,7 +91,7 @@ class CampusMapView extends StatelessWidget {
                       left: 16,
                       top: 16,
                       child: Text(
-                        '上海海洋大学',
+                        '校园地图',
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.w700,

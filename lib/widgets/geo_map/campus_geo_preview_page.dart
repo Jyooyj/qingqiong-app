@@ -83,7 +83,7 @@ class _CampusGeoPreviewPageState extends State<CampusGeoPreviewPage> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   const Text(
-                    '上海海洋大学 · 校园智能清扫地图',
+                    '校园智能清扫地图',
                     style: TextStyle(fontSize: 21, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 6),
